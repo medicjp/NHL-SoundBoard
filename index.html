@@ -75,7 +75,7 @@ input[type=checkbox]{accent-color:var(--amber)}
 .light.on{background:var(--led);box-shadow:0 0 30px 10px rgba(255,59,48,.6)}
 .light.on::after{content:"";position:absolute;inset:0;background:conic-gradient(from 0deg,transparent 0 70%,rgba(255,255,255,.75) 80%,transparent 90%);animation:spin .5s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.goal{width:170px;height:170px;border-radius:50%;border:6px solid var(--team2);background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--team) 70%,#fff 30%),var(--team) 55%,color-mix(in srgb,var(--team) 60%,#000 40%));
+.goal{touch-action:none;user-select:none;-webkit-user-select:none;width:170px;height:170px;border-radius:50%;border:6px solid var(--team2);background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--team) 70%,#fff 30%),var(--team) 55%,color-mix(in srgb,var(--team) 60%,#000 40%));
   font-family:var(--display);font-weight:800;font-size:44px;letter-spacing:.06em;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.4);box-shadow:0 8px 0 #000,0 0 0 1px #000;transition:transform .06s}
 .goal:active,.goal.hit{transform:translateY(5px);box-shadow:0 3px 0 #000,0 0 0 1px #000}
 .goalwrap small{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.08em}
@@ -92,7 +92,7 @@ input[type=checkbox]{accent-color:var(--amber)}
 .sect h2{margin:0;font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:baseline;gap:10px}
 .sect h2 span{font-family:var(--mono);font-weight:400;font-size:10px;letter-spacing:.1em;color:var(--dim)}
 .pads{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
-.pad{position:relative;background:linear-gradient(#232a33,#1a1f26);border:1px solid #2f3842;border-bottom-width:3px;border-radius:5px;padding:10px;text-align:left;min-height:74px;display:grid;align-content:space-between;gap:6px}
+.pad{touch-action:manipulation;user-select:none;-webkit-user-select:none;position:relative;background:linear-gradient(#232a33,#1a1f26);border:1px solid #2f3842;border-bottom-width:3px;border-radius:5px;padding:10px;text-align:left;min-height:74px;display:grid;align-content:space-between;gap:6px}
 .pad:active,.pad.hit{transform:translateY(2px);border-bottom-width:1px}
 .pad .k{position:absolute;top:6px;right:8px;font-family:var(--mono);font-size:10px;color:var(--dim)}
 .pad b{font-family:var(--display);font-size:16px;letter-spacing:.03em;line-height:1.05;padding-right:18px}
@@ -119,7 +119,7 @@ input[type=checkbox]{accent-color:var(--amber)}
 <div class="flash" id="flash"></div>
 <div class="wrap">
   <header class="bar">
-    <div class="brand">Goal Horn Board<small>NHL 32-TEAM ARENA CONTROL · PRESS SPACE TO SCORE</small></div>
+    <div class="brand">Goal Horn Board<small>NHL 32-TEAM ARENA CONTROL · HOLD SPACE TO BLOW THE HORN</small></div>
     <div class="onair" id="onair"><i></i>ON AIR</div>
     <div class="ctrls">
       <label for="vol">MASTER <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8"></label>
@@ -142,8 +142,8 @@ input[type=checkbox]{accent-color:var(--amber)}
         </div>
         <div class="goalwrap">
           <div class="light" id="light"></div>
-          <button class="goal" id="goalBtn" aria-label="Goal: play full goal sequence">GOAL</button>
-          <small>HORN · CROWD · PA · SONG</small>
+          <button class="goal" id="goalBtn" aria-label="Goal: hold to sound the horn, release to stop">GOAL</button>
+          <small>HOLD TO BLOW · RELEASE TO STOP</small>
         </div>
       </div>
 
@@ -295,33 +295,33 @@ function noise(){
 }
 const shaper=(()=>{let c;return()=>{if(c)return c;const n=1024;c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/n*2-1;c[i]=Math.tanh(x*2.6)}return c}})();
 
-/* Air horn: stacked detuned saw/square reeds, pitch scoop on attack, nonlinear drive, bandpassed through the horn bell. */
-function horn(h,t0){
-  let t=t0;const out=bus();out.gain.value=.0;
-  h.b.forEach(([dur,gap])=>{
-    const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.9,t+.07);g.gain.setValueAtTime(.9,t+dur-.12);g.gain.linearRampToValueAtTime(0,t+dur+.18);
-    const ws=ctx.createWaveShaper();ws.curve=shaper();
-    const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=900+h.tone*2600;lp.Q.value=1.4;
-    const pk=ctx.createBiquadFilter();pk.type='peaking';pk.frequency.value=h.f*4;pk.gain.value=6;pk.Q.value=1.2;
-    const pre=ctx.createGain();pre.gain.value=.22;
-    pre.connect(ws).connect(lp).connect(pk).connect(g).connect(out);
-    h.ch.forEach((r,i)=>{
-      [-6,0,7].forEach(det=>{
-        const o=ctx.createOscillator();o.type=i%2?'square':'sawtooth';
-        const f=h.f*r;o.frequency.setValueAtTime(f*Math.pow(2,-h.scoop/12),t);o.frequency.exponentialRampToValueAtTime(f,t+.22);
-        o.frequency.setValueAtTime(f,t+dur-.1);o.frequency.exponentialRampToValueAtTime(f*.985,t+dur+.18);
-        o.detune.value=det;
-        const og=ctx.createGain();og.gain.value=(i===0?1:.75)/3;
-        o.connect(og).connect(pre);o.start(t);track(o,t+dur+.25);
-      });
-    });
-    // slight wobble like compressed air
-    const lfo=ctx.createOscillator();lfo.frequency.value=5.5;const lg=ctx.createGain();lg.gain.value=.05;lfo.connect(lg).connect(g.gain);lfo.start(t);track(lfo,t+dur+.2);
-    t+=dur+gap+.05;
-  });
-  out.gain.setValueAtTime(.55,t0);
-  return t;
+/* Air horn: stacked detuned saw/square reeds, pitch scoop on attack, nonlinear drive, bandpassed through the horn bell.
+   startHorn() sounds until release() is called, like the operator's button: air valve open while held. */
+function startHorn(h,t){
+  const out=bus();out.gain.value=.55;
+  const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.9,t+.07);
+  const ws=ctx.createWaveShaper();ws.curve=shaper();
+  const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=900+h.tone*2600;lp.Q.value=1.4;
+  const pk=ctx.createBiquadFilter();pk.type='peaking';pk.frequency.value=h.f*4;pk.gain.value=6;pk.Q.value=1.2;
+  const pre=ctx.createGain();pre.gain.value=.22;
+  pre.connect(ws).connect(lp).connect(pk).connect(g).connect(out);
+  const oscs=[];
+  h.ch.forEach((r,i)=>[-6,0,7].forEach(det=>{
+    const o=ctx.createOscillator();o.type=i%2?'square':'sawtooth';const f=h.f*r;
+    o.frequency.setValueAtTime(f*Math.pow(2,-h.scoop/12),t);o.frequency.exponentialRampToValueAtTime(f,t+.22);o.detune.value=det;
+    const og=ctx.createGain();og.gain.value=(i===0?1:.75)/3;o.connect(og).connect(pre);o.start(t);track(o);oscs.push([o,f]);
+  }));
+  const lfo=ctx.createOscillator();lfo.frequency.value=5.5;const lg=ctx.createGain();lg.gain.value=.05;lfo.connect(lg).connect(g.gain);lfo.start(t);track(lfo);oscs.push([lfo,0]);
+  let done=false;
+  return {release(at){
+    if(done)return;done=true;const r=Math.max(at??ctx.currentTime,t+.09);
+    // valve closes: air pressure falls, pitch sags slightly, sound dies within ~0.15s
+    g.gain.cancelScheduledValues(r);g.gain.setValueAtTime(g.gain.value||.9,r);g.gain.linearRampToValueAtTime(0,r+.15);
+    oscs.forEach(([o,f])=>{if(f){o.frequency.cancelScheduledValues(r);o.frequency.setValueAtTime(f,r);o.frequency.exponentialRampToValueAtTime(f*.97,r+.15)}try{o.stop(r+.2)}catch(e){}});
+  }};
 }
+/* Programmed pattern: the team's usual blast count and lengths, played automatically. */
+function horn(h,t0){let t=t0;h.b.forEach(([dur,gap])=>{startHorn(h,t).release(t+dur);t+=dur+gap+.05});return t}
 function crowd(t0,dur=7,peak=.55){
   const n=noise(),bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=900;bp.Q.value=.5;
   const bp2=ctx.createBiquadFilter();bp2.type='peaking';bp2.frequency.value=2400;bp2.gain.value=5;
@@ -392,6 +392,11 @@ function openDB(){return new Promise(res=>{try{const r=indexedDB.open('horns',1)
 function dbPut(k,v){try{db&&db.transaction('c','readwrite').objectStore('c').put(v,k)}catch(e){}}
 function dbDel(k){try{db&&db.transaction('c','readwrite').objectStore('c').delete(k)}catch(e){}}
 function dbAll(){return new Promise(res=>{try{if(!db)return res();const s=db.transaction('c').objectStore('c'),r=s.openCursor();r.onsuccess=()=>{const c=r.result;if(c){clips[c.key]=c.value;c.continue()}else res()};r.onerror=()=>res()}catch(e){res()}})}
+async function holdClip(blob){
+  const buf=await ctx.decodeAudioData(await blob.arrayBuffer());const s=ctx.createBufferSource();s.buffer=buf;const g=ctx.createGain();g.gain.value=.9;s.connect(g).connect(dry);
+  const t=ctx.currentTime;s.start(t);track(s);let done=false;
+  return {release(){if(done)return;done=true;const r=Math.max(ctx.currentTime,t+.05);g.gain.setValueAtTime(.9,r);g.gain.linearRampToValueAtTime(0,r+.08);try{s.stop(r+.1)}catch(e){}}};
+}
 async function playClip(blob,t){
   const buf=await ctx.decodeAudioData(await blob.arrayBuffer());const s=ctx.createBufferSource();s.buffer=buf;const g=ctx.createGain();g.gain.value=.9;s.connect(g).connect(dry);
   s.start(Math.max(t,ctx.currentTime));track(s);return Math.max(t,ctx.currentTime)+buf.duration;
@@ -415,8 +420,8 @@ function standby(){$('npTag').textContent='STANDBY';$('npSong').textContent=cur.
 function ytLink(q){return 'https://www.youtube.com/results?search_query='+encodeURIComponent(q)}
 function buildPads(){
   const t=cur,P=[
-   {k:'1',cls:'team',b:'Goal horn',s:t.a,fn:at=>hornOrClip(at)},
-   {k:'2',cls:'team',b:'Horn + crowd',s:'Horn with the building erupting',fn:at=>{const e=hornOrClip(at);if($('crowdOn').checked)crowd(at+.2,7);return e}},
+   {k:'1',cls:'team',b:'Horn (hold)',s:'Sounds while held',hold:true},
+   {k:'2',cls:'team',b:'Programmed horn',s:hornDesc(t)+' + crowd',fn:at=>{const e=hornOrClip(at);if($('crowdOn').checked)crowd(at+.2,7);return e}},
    ...t.fx.map((f,i)=>({k:'',cls:'team',b:fxName[f],s:'Arena effect',fn:at=>(FX[f](at),at+3)})),
    {k:'3',b:'Charge!',s:'Organ',fn:at=>ORGAN.charge(at)},
    {k:'4',b:`Let's go ${short(t)}`,s:'Organ + claps',fn:at=>ORGAN.letsgo(at)},
@@ -435,6 +440,7 @@ function buildPads(){
     const el=p.link?document.createElement('a'):document.createElement('button');el.className='pad '+(p.cls||'');
     el.innerHTML=(p.k?`<span class="k">${p.k}</span>`:'')+`<b></b><span></span>`;el.querySelector('b').textContent=p.b;el.querySelector('span:last-child').textContent=p.s;
     if(p.link){el.href=p.link;el.target='_blank';el.rel='noopener';el.style.textDecoration='none';el.style.color='inherit'}
+    else if(p.hold)bindHold(el,()=>holdStart(false),()=>holdEnd(false));
     else el.onclick=()=>triggerPad(p,el);
     if(p.k)el.dataset.key=p.k;$('pads').appendChild(el)});
   window._pads=P;
@@ -452,20 +458,42 @@ function pa(manual){
     u.rate=.82;u.pitch=.6;u.volume=1;const vs=speechSynthesis.getVoices().filter(v=>v.localService!==false&&(fr?/^fr/:/^en/).test(v.lang));const v=vs.find(v=>/David|Daniel|Alex|Fred|Thomas|male/i.test(v.name))||vs[0];if(v)u.voice=v;speechSynthesis.speak(u)}catch(e){}
 }
 
-async function goal(){
-  initAudio();await ctx.resume();const t0=ctx.currentTime+.05,t=cur;
-  $('goalBtn').classList.add('hit');setTimeout(()=>$('goalBtn').classList.remove('hit'),150);
-  $('light').classList.add('on');$('flash').classList.remove('go');void $('flash').offsetWidth;$('flash').classList.add('go');
-  let end=hornOrClip(t0);
-  t.fx.forEach((f,i)=>FX[f](t0+.15+i*.4));
-  if($('crowdOn').checked)crowd(t0+.25,9,.6);
-  if($('pa').checked)setTimeout(()=>pa(false),Math.max(1200,(end-t0)*1000*.7));
-  $('npTag').textContent='GOAL';$('npSong').textContent=t.song[0];$('npArtist').textContent=t.song[1];
-  if(clips[t.id+':s']){const se=await playClip(clips[t.id+':s'],end+.2);$('npTag').textContent='NOW PLAYING';end=se}
-  else{setTimeout(()=>{$('npTag').textContent='CUE SONG';$('npArtist').innerHTML='';const a=document.createElement('a');a.href=ytLink(t.song[0]+' '+t.song[1]+' '+t.n+' goal song');a.target='_blank';a.rel='noopener';a.textContent=t.song[1]+' · open song ↗';$('npArtist').appendChild(a)},(end-t0)*1000)}
-  const ms=(end-t0)*1000+400;onAir(ms+4000);setTimeout(()=>$('light').classList.remove('on'),Math.max(ms,5000));
+function hornDesc(t){const b=t.horn.b;return b.length>1?b.length+' blasts':b[0][0].toFixed(1)+'s blast'}
+/* Hold-to-blow. GOAL (button or Space) also fires the light, crowd and arena effects on press,
+   then the PA call and goal song after the horn is released. */
+let held=null,heldGoal=false,pressT=0;
+async function holdStart(isGoal){
+  if(held)return;initAudio();await ctx.resume();if(held)return;
+  const t=cur,t0=ctx.currentTime+.01;pressT=t0;heldGoal=isGoal;
+  held=clips[t.id+':h']?{pending:holdClip(clips[t.id+':h'])}:startHorn(t.horn,t0);
+  $('light').classList.add('on');$('onair').classList.add('live');clearTimeout(airT);
+  if(isGoal){
+    $('goalBtn').classList.add('hit');$('flash').classList.remove('go');void $('flash').offsetWidth;$('flash').classList.add('go');
+    t.fx.forEach((f,i)=>FX[f](t0+.15+i*.4));
+    if($('crowdOn').checked)crowd(t0+.25,9,.6);
+    $('npTag').textContent='GOAL';$('npSong').textContent=t.song[0];$('npArtist').textContent=t.song[1];
+  }
 }
-function killAll(){active.forEach(n=>{try{n.stop()}catch(e){}});active.clear();try{speechSynthesis.cancel()}catch(e){}$('light').classList.remove('on');$('onair').classList.remove('live');standby();document.querySelectorAll('.pad.playing').forEach(p=>p.classList.remove('playing'))}
+async function holdEnd(){
+  if(!held)return;const h=held,isGoal=heldGoal;held=null;
+  if(h.pending)(await h.pending).release();else h.release(ctx.currentTime);
+  $('goalBtn').classList.remove('hit');
+  const t=cur,end=ctx.currentTime+.2;
+  setTimeout(()=>$('light').classList.remove('on'),isGoal?4000:300);onAir(isGoal?5000:400);
+  if(!isGoal)return;
+  if($('pa').checked)setTimeout(()=>pa(false),500);
+  if(clips[t.id+':s']){const se=await playClip(clips[t.id+':s'],end+.3);$('npTag').textContent='NOW PLAYING';onAir((se-ctx.currentTime)*1000)}
+  else{$('npTag').textContent='CUE SONG';$('npArtist').innerHTML='';const a=document.createElement('a');a.href=ytLink(t.song[0]+' '+t.song[1]+' '+t.n+' goal song');a.target='_blank';a.rel='noopener';a.textContent=t.song[1]+' · search online ↗';$('npArtist').appendChild(a)}
+}
+function bindHold(el,down,up){
+  el.addEventListener('pointerdown',e=>{if(e.button>0)return;e.preventDefault();try{el.setPointerCapture(e.pointerId)}catch(_){}down()});
+  ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>el.addEventListener(ev,up));
+  el.addEventListener('contextmenu',e=>e.preventDefault());
+  el.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&!e.repeat){e.preventDefault();e.stopPropagation();down()}});
+  el.addEventListener('keyup',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();up()}});
+}
+window.addEventListener('blur',()=>holdEnd());
+function killAll(){if(held){const h=held;held=null;h.pending?h.pending.then(x=>x.release()):h.release()}active.forEach(n=>{try{n.stop()}catch(e){}});active.clear();try{speechSynthesis.cancel()}catch(e){}$('light').classList.remove('on');$('onair').classList.remove('live');standby();document.querySelectorAll('.pad.playing').forEach(p=>p.classList.remove('playing'))}
 function toast(m){$('toast').textContent=m;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2600)}
 function meterLoop(){const bars=$('meter').children,d=new Uint8Array(analyser.frequencyBinCount);(function f(){analyser.getByteFrequencyData(d);for(let i=0;i<bars.length;i++)bars[i].style.height=Math.max(6,d[i+1]/255*100)+'%';requestAnimationFrame(f)})()}
 
@@ -476,11 +504,13 @@ DIVS.forEach(dv=>{const s=document.createElement('div');s.className='div';s.inne
   $('rack').appendChild(s)});
 for(let i=0;i<16;i++)$('meter').appendChild(document.createElement('i'));
 
-$('goalBtn').onclick=goal;$('stopAll').onclick=killAll;
+bindHold($('goalBtn'),()=>holdStart(true),()=>holdEnd());$('stopAll').onclick=killAll;
 $('vol').oninput=e=>{if(master)master.gain.value=+e.target.value};
 document.addEventListener('keydown',e=>{if(e.target.matches('input,select,textarea'))return;
-  if(e.code==='Space'){e.preventDefault();goal()}else if(e.key==='Escape')killAll();
-  else{const el=document.querySelector(`.pad[data-key="${e.key}"]`);if(el)el.click()}});
+  if(e.code==='Space'){e.preventDefault();if(!e.repeat)holdStart(true)}else if(e.key==='Escape')killAll();
+  else if(e.key==='1'){if(!e.repeat)holdStart(false)}
+  else{const el=document.querySelector(`.pad[data-key="${e.key}"]`);if(el&&!e.repeat)el.click()}});
+document.addEventListener('keyup',e=>{if(e.code==='Space'||e.key==='1'){e.preventDefault();holdEnd()}});
 function loadFile(input,suffix,label){input.onchange=()=>{const f=input.files[0];if(!f)return;clips[cur.id+suffix]=f;dbPut(cur.id+suffix,f);setTeam(cur);toast(`${label} loaded for ${cur.n}`);input.value=''}}
 loadFile($('file'),':h','Horn file');
 $('bulk').onchange=()=>{let n=0;[...$('bulk').files].forEach(f=>{const m=f.name.toUpperCase().match(/^([A-Z]{3})[-_ ]*(HORN|SONG)/);const t=m&&T.find(x=>x.id===m[1]);if(!t)return;const k=t.id+(m[2]==='HORN'?':h':':s');clips[k]=f;dbPut(k,f);n++});
