@@ -68,6 +68,7 @@ input[type=checkbox]{accent-color:var(--amber)}
 .arena{color:var(--dim)}
 .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .chip{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;padding:3px 7px;border-radius:3px;background:var(--panel2);border:1px solid var(--line);color:var(--fg)}
+.chip.conf{text-decoration:none}.chip.conf.v{border-color:var(--ok);color:var(--ok)}.chip.conf.r{border-color:#3b6a8a;color:#9fd0f0}.chip.conf.u{border-color:var(--amber);color:var(--amber)}
 .chip.user{border-color:var(--ok);color:var(--ok)}
 /* GOAL button + light */
 .goalwrap{display:grid;justify-items:center;gap:8px}
@@ -178,86 +179,119 @@ input[type=checkbox]{accent-color:var(--amber)}
           <p class="small">Song files play right after the horn during GOAL, like the real sequence. "Load many…" takes a batch of files named by team code, like <code>BOS-horn.mp3</code> and <code>BOS-song.mp3</code>. Everything runs offline; files stay in this browser. Use clips you own or have the right to use.</p>
         </div>
       </div>
-      <p class="small">Goal songs are as reported for recent seasons and can change mid-season; Buffalo, Washington and Winnipeg rotate songs by player or jersey. Without a loaded song file, song titles link to an online search (the only part that needs a connection). Synthesized horns are approximations, not recordings. Not affiliated with the NHL or any team.</p>
+      <p class="small">Team data checked November 4, 2026. Each team's song chip shows how well it is sourced (green: verified 2026-27, blue: last confirmed 2025-26, amber: unofficial, older or conflicting) and links to the source. Teams can change songs mid-season. Without a loaded song file, song titles link to an online search (the only part that needs a connection). Synthesized horns are approximations, not recordings. Not affiliated with the NHL or any team.</p>
     </section>
   </div>
 </div>
 <div class="toast" id="toast"></div>
 
 <script>
-/* ---------------- DATA ----------------
- horn: f = fundamental Hz, ch = chord ratios, b = blasts [[durSec,gapAfter]...], tone = brightness 0..1, scoop = semitones rise at start
- fx: extra arena effects fired on a goal
+/* ---------------- DATA (checked 2026-11-04) ----------------
+ horn: f = fundamental Hz, ch = chord ratios, b = programmed blasts [[durSec,gapAfter]...], tone = brightness 0..1, scoop = semitones rise at start
+ fx: effects confirmed to fire with goals · pre: confirmed arena sounds used at other moments (pads only)
+ conf: [status, level, source] — level: v = verified this season, r = last confirmed 2025-26, u = unofficial/conflicting
 */
 const T=[
  // ATLANTIC
- {id:"BOS",n:"Boston Bruins",d:"Atlantic",a:"TD Garden",c:["#FFB81C","#111111"],song:["Kernkraft 400","Zombie Nation"],horn:{f:118,ch:[1,1.26,1.5],b:[[4.2,0]],tone:.55,scoop:1.2},fx:[],
-  cues:[["Dirty Water","The Standells","Plays after every home win"]],trad:["\"Kernkraft 400\" has been the goal song for years; the crowd chants the \"oh-oh-oh\" hook.","\"Dirty Water\" blares after every home win.","Deep, single sustained horn."]},
- {id:"BUF",n:"Buffalo Sabres",d:"Atlantic",a:"KeyBank Center",c:["#003087","#FFB81C"],song:["Song 2","Blur"],horn:{f:131,ch:[1,1.19,1.5],b:[[1.1,.25],[1.1,.25],[2.4,0]],tone:.6,scoop:1},fx:[],
-  cues:[["Fan-vote song (blue & gold)","Chosen by fans for 2025-26","Finalists: Kickstart My Heart, Swords of a Thousand Men, Everytime We Touch, Acquiesce, Tick Tick Boom"]],trad:["\"Song 2\" stays for black-and-red games; fans voted on a new song for blue-and-gold games in 2025-26.","\"Let's go Buffalo!\" chant between whistles.","Sabretooth bangs the drum in the stands."]},
- {id:"DET",n:"Detroit Red Wings",d:"Atlantic",a:"Little Caesars Arena",c:["#CE1126","#FFFFFF"],song:["Without Me","Eminem"],horn:{f:98,ch:[1,1.2,1.5,2],b:[[4.6,0]],tone:.45,scoop:1.5},fx:[],
-  cues:[["Don't Stop Believin'","Journey","Third-period singalong (\"born and raised in South Detroit\")"]],trad:["Octopus throwing on the ice, a tradition since 1952.","\"Don't Stop Believin'\" singalong in the third period.","Low, train-like horn."]},
- {id:"FLA",n:"Florida Panthers",d:"Atlantic",a:"Amerant Bank Arena",c:["#C8102E","#B9975B"],song:["Move Your Body","Ownboss ft. Sevek"],horn:{f:139,ch:[1,1.25,1.5],b:[[3.6,0]],tone:.7,scoop:1},fx:["roar"],
-  cues:[],trad:["Plastic rats rain down after wins (the \"Rat Trick\").","A panther roar plays with the horn.","\"Let's go Panthers\" chant."]},
- {id:"MTL",n:"Montréal Canadiens",d:"Atlantic",a:"Centre Bell",c:["#AF1E2D","#192168"],song:["Canadiens Goal Song","Antoine Beck"],horn:{f:110,ch:[1,1.26,1.5],b:[[4,0]],tone:.5,scoop:.8},fx:[],
-  cues:[["Olé Olé Olé","Crowd chant","Fills the Bell after big goals and wins"]],trad:["\"Olé olé olé\" chant after big goals.","\"Go Habs Go!\" chant.","The PA calls the scorer in French and English: \"But des Canadiens…\"."],lang:"fr"},
- {id:"OTT",n:"Ottawa Senators",d:"Atlantic",a:"Canadian Tire Centre",c:["#C52032","#C2912C"],song:["Song 2","Blur"],horn:{f:123,ch:[1,1.19,1.5],b:[[3.8,0]],tone:.55,scoop:1},fx:[],
-  cues:[],trad:["\"Go Sens Go!\" chant.","Fans join the \"woo-hoo\" in the song.","Single long horn."]},
- {id:"TBL",n:"Tampa Bay Lightning",d:"Atlantic",a:"Amalie Arena",c:["#002868","#FFFFFF"],song:["Goons","Mona"],horn:{f:117,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.6,scoop:1},fx:["tesla","thunder"],
-  cues:[],trad:["Tesla coils above the ice fire bolts of electricity after goals.","Thunder effects roll through the arena.","Thunderbug fires up the crowd."]},
- {id:"TOR",n:"Toronto Maple Leafs",d:"Atlantic",a:"Scotiabank Arena",c:["#00205B","#FFFFFF"],song:["Dup Dup","Mickie Krause"],horn:{f:104,ch:[1,1.19,1.5,1.78],b:[[4.4,0]],tone:.5,scoop:1.4},fx:[],
-  cues:[],trad:["One of the league's most recognizable horns: deep and long.","\"Go Leafs Go!\" chant.","Fans sing along during O Canada."]},
+ {id:"BOS",n:"Boston Bruins",d:"Atlantic",a:"TD Garden",c:["#FFB81C","#111111"],song:["Kernkraft 400","Zombie Nation"],horn:{f:110,ch:[1,1.26,1.5],b:[[4.2,0]],tone:.5,scoop:1.2},fx:[],pre:[],
+  conf:["Confirmed 2025-26","r","https://theleadsm.com/who-has-the-nhls-top-10-goal-horns/"],
+  cues:[["Dirty Water","The Standells","After every home win since 1995"]],trad:["\"Kernkraft 400\" is the goal song; the crowd chants the hook.","\"Dirty Water\" plays after every home win.","Bold, deep horn (Team USA borrowed it at the 4 Nations Face-Off)."]},
+ {id:"BUF",n:"Buffalo Sabres",d:"Atlantic",a:"KeyBank Center",c:["#003087","#FFB81C"],song:["Kickstart My Heart","Mötley Crüe"],horn:{f:131,ch:[1,1.19,1.5],b:[[3.6,0]],tone:.6,scoop:1},fx:[],pre:[],
+  conf:["Fan vote, 2025-26","r","https://x.com/BuffaloSabres/status/1976394342697930763"],
+  cues:[["Song 2","Blur","Goal song for black-and-red games"]],trad:["Fans voted to keep \"Kickstart My Heart\" for blue-and-gold games in 2025-26.","\"Song 2\" plays when the Sabres wear black and red.","Powerful mid-pitch horn that fans describe as vibrating the building."]},
+ {id:"DET",n:"Detroit Red Wings",d:"Atlantic",a:"Little Caesars Arena",c:["#CE1126","#FFFFFF"],song:["Without Me","Eminem"],horn:{f:98,ch:[1,1.2,1.5,2],b:[[4.4,0]],tone:.45,scoop:1.4},fx:[],pre:[],
+  conf:["Reported 2026-27 (unofficial)","u","https://hockeygoalsongs.com/detroit-red-wings-goal-songs.html"],
+  cues:[],trad:["Eminem's \"Without Me\" is the goal song.","Octopus throwing is a tradition dating to 1952."]},
+ {id:"FLA",n:"Florida Panthers",d:"Atlantic",a:"Amerant Bank Arena",c:["#C8102E","#B9975B"],song:["Panthers Pulse","Öwnboss & Selva"],horn:{f:139,ch:[1,1.25,1.5],b:[[3.6,0]],tone:.7,scoop:1},fx:[],pre:[],
+  conf:["Confirmed 2025-26","r","https://thehockeynews.com/nhl/florida-panthers"],
+  cues:[],trad:["\"Panthers Pulse\" is a custom remix of \"Move Your Body\", used since 2023-24.","The Palm Beach Symphony recorded an orchestral version in 2025.","Plastic rats are thrown on the ice after wins."]},
+ {id:"MTL",n:"Montréal Canadiens",d:"Atlantic",a:"Bell Centre",c:["#AF1E2D","#192168"],song:["Hey!! (Habs goal song)","Antoine Becks"],horn:{f:110,ch:[1,1.26,1.5],b:[[4,0]],tone:.5,scoop:.8},fx:[],pre:[],
+  conf:["Last confirmed 2025-26","r","https://thehockeywriters.com/nhl-playoff-teams-goal-songs-ranked-2025/"],
+  cues:[["Le But","Loco Locass","Now used as the win song"],["Olé Olé Olé","Crowd chant","After big goals and wins"]],trad:["\"Olé olé olé\" chant after big goals.","\"Le But\" by Loco Locass moved to win-song duty.","The PA calls goals in French and English."],lang:"fr"},
+ {id:"OTT",n:"Ottawa Senators",d:"Atlantic",a:"Canadian Tire Centre",c:["#C52032","#C2912C"],song:["Song 2","Blur"],horn:{f:123,ch:[1,1.19,1.5],b:[[3.8,0]],tone:.55,scoop:1},fx:[],pre:[],
+  conf:["Last confirmed 2025-26","r","https://hockeygoalsongs.com/ottawa-senators-goal-songs.html"],
+  cues:[],trad:["Fans shout the \"woo-hoo\" in \"Song 2\".","\"Go Sens Go!\" chant."]},
+ {id:"TBL",n:"Tampa Bay Lightning",d:"Atlantic",a:"Benchmark International Arena",c:["#002868","#FFFFFF"],song:["Burn It to the Ground","Nickelback"],horn:{f:104,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.6,scoop:1},fx:["tesla"],pre:[],
+  conf:["Confirmed 2025-26","r","https://www.nhl.com/lightning/news/the-2026-lightning-home-opener-pregame-guide"],
+  cues:[["Thunderstruck","AC/DC","Plays with the opening video"],["Goons","Mona","Goal song 2017-18 to 2024-25"]],trad:["Tesla coils above the ice fire after goals.","Strong bass horn \"with a hint of electricity\".","\"Thunderstruck\" plays with the opening video."]},
+ {id:"TOR",n:"Toronto Maple Leafs",d:"Atlantic",a:"Scotiabank Arena",c:["#00205B","#FFFFFF"],song:["Maria (I Like It Loud)","Scooter"],horn:{f:117,ch:[1,1.19,1.5,2],b:[[4,0]],tone:.5,scoop:1.2},fx:[],pre:[],
+  conf:["2026-27 per reporter (unofficial)","u","https://x.com/lukefoxjukebox/status/2105111955031613609"],
+  cues:[["Panama","Van Halen","Goal song in 2025 and the 2025 playoffs"]],trad:["New horn for 2026-27, which fans say sounds like Calgary's Saddledome horn.","\"Go Leafs Go!\" chant."]},
  // METROPOLITAN
- {id:"CAR",n:"Carolina Hurricanes",d:"Metropolitan",a:"Lenovo Center",c:["#CC0000","#000000"],song:["Raise Up","Petey Pablo"],horn:{f:147,ch:[1,1.26,1.5],b:[[3.2,0]],tone:.65,scoop:1},fx:["siren"],
-  cues:[],trad:["A hurricane warning siren wails with the horn.","Storm Surge celebrations after wins.","Caniacs bang thundersticks."]},
- {id:"CBJ",n:"Columbus Blue Jackets",d:"Metropolitan",a:"Nationwide Arena",c:["#002654","#CE1126"],song:["For Those About to Rock / The Whip","AC/DC / Locksley"],horn:{f:110,ch:[1,1.26,1.5],b:[[3.2,0]],tone:.55,scoop:1},fx:["cannon"],
-  cues:[["The Whip","Locksley","\"Whip it\" clap with the goal song"]],trad:["A Civil War-era replica cannon fires after every goal.","Fans crack the whip clap during \"The Whip\".","Cannon also fires as the team takes the ice."]},
- {id:"NJD",n:"New Jersey Devils",d:"Metropolitan",a:"Prudential Center",c:["#CE1126","#000000"],song:["Howl","The Gaslight Anthem"],horn:{f:131,ch:[1,1.19,1.5],b:[[3.6,0]],tone:.6,scoop:1},fx:[],
-  cues:[],trad:["Fans clap along to \"Howl\".","\"Let's go Devils!\" chant.","The Rock goes red after goals."]},
- {id:"NYI",n:"New York Islanders",d:"Metropolitan",a:"UBS Arena",c:["#00539B","#F47D30"],song:["Crowd Chant","Joe Satriani"],horn:{f:123,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.55,scoop:1},fx:[],
-  cues:[["Yes! Yes! Yes!","Crowd chant","Belted out after goals"]],trad:["Whole building sings the \"whoa-oh\" chant to \"Crowd Chant\".","\"Yes! Yes! Yes!\" after goals.","Horn carried over from the Coliseum era."]},
- {id:"NYR",n:"New York Rangers",d:"Metropolitan",a:"Madison Square Garden",c:["#0038A8","#CE1126"],song:["Slap Shot","Ray Castoldi"],horn:{f:110,ch:[1,1.26,1.5,2],b:[[4,0]],tone:.5,scoop:1.2},fx:[],
-  cues:[],trad:["\"Slap Shot\" was written by MSG's own organist, Ray Castoldi.","\"Let's go Rangers!\" on the organ.","Fans whistle with the goal song."]},
- {id:"PHI",n:"Philadelphia Flyers",d:"Metropolitan",a:"Xfinity Mobile Arena",c:["#F74902","#000000"],song:["Ain't Talking 'Bout Love","Van Halen"],horn:{f:117,ch:[1,1.19,1.5],b:[[3.8,0]],tone:.6,scoop:1},fx:[],
-  cues:[],trad:["Gritty celebrates every goal.","\"Let's go Flyers!\" chant.","Broad Street Bullies chants."]},
- {id:"PIT",n:"Pittsburgh Penguins",d:"Metropolitan",a:"PPG Paints Arena",c:["#FCB514","#000000"],song:["Party Hard","Andrew W.K."],horn:{f:139,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.65,scoop:1},fx:[],
-  cues:[],trad:["\"Let's go Pens!\" chant.","Fans shout along to \"Party Hard\".","Bright, high horn."]},
- {id:"WSH",n:"Washington Capitals",d:"Metropolitan",a:"Capital One Arena",c:["#C8102E","#041E42"],song:["Player goal songs","Each scorer has their own"],horn:{f:117,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.6,scoop:1},fx:[],
-  cues:[["Unsafe / Rock the Red","Crowd","\"Unleash the Fury\" hype video before puck drop"]],trad:["Each scorer has their own goal song.","Fans shout \"RED!\" at \"the rockets' red glare\" in the anthem.","\"Let's go Caps!\" chant."]},
+ {id:"CAR",n:"Carolina Hurricanes",d:"Metropolitan",a:"Lenovo Center",c:["#CC0000","#000000"],song:["Raise Up","Petey Pablo"],horn:{f:147,ch:[1,1.26,1.5],b:[[3.2,0]],tone:.65,scoop:1},fx:[],pre:["siren"],
+  conf:["Last confirmed 2025-26","r","https://abc11.com/post/history-behind-hurricanes-horn/19296322/"],
+  cues:[],trad:["A guest sounds the storm warning siren before puck drop (not after goals).","Storm Surge celebration after home wins.","Rally towels."]},
+ {id:"CBJ",n:"Columbus Blue Jackets",d:"Metropolitan",a:"Nationwide Arena",c:["#002654","#CE1126"],song:["For Those About to Rock → The Whip","AC/DC → Locksley"],horn:{f:110,ch:[1,1.26,1.5],b:[[3.2,0]],tone:.55,scoop:1},fx:["cannon"],pre:[],
+  conf:["Long-running; not re-dated","u","https://www.nhl.com/bluejackets/news/loathed-by-opponents-the-cannon-has-become-a-blue-jackets-tradition-287585426"],
+  cues:[],trad:["A replica 1857 cannon fires after every goal, with an AC/DC \"For Those About to Rock\" snippet.","\"The Whip\" by Locksley follows.","The cannon traveled to the 2026 Stadium Series."]},
+ {id:"NJD",n:"New Jersey Devils",d:"Metropolitan",a:"Prudential Center",c:["#CE1126","#000000"],song:["Howl","The Gaslight Anthem"],horn:{f:131,ch:[1,1.19,1.5],b:[[3.6,0]],tone:.6,scoop:1},fx:[],pre:[],
+  conf:["Last confirmed 2025-26","r","https://www.stadiumjourney.com/stadiums/prudential-center-s31"],
+  cues:[],trad:["\"Howl\" by New Jersey's own Gaslight Anthem.","\"Let's go Devils!\" chant."]},
+ {id:"NYI",n:"New York Islanders",d:"Metropolitan",a:"UBS Arena",c:["#00539B","#F47D30"],song:["Crowd Chant","Joe Satriani"],horn:{f:123,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.55,scoop:1},fx:[],pre:[],
+  conf:["Last confirmed 2024-25","u","https://www.youtube.com/watch?v=BepV5vMhVW4"],
+  cues:[],trad:["Fans sing the \"whoa-oh\" of \"Crowd Chant\"."]},
+ {id:"NYR",n:"New York Rangers",d:"Metropolitan",a:"Madison Square Garden",c:["#0038A8","#CE1126"],song:["Slapshot","Ray Castoldi (perf. Bad Apple)"],horn:{f:165,ch:[1,1.26,1.5],b:[[3.4,0]],tone:.75,scoop:.8},fx:[],pre:[],
+  conf:["Confirmed 2025-26","r","https://theleadsm.com/which-teams-have-the-nhls-top-10-goal-songs/"],
+  cues:[],trad:["The horn is based on an FDNY firetruck honk.","\"Slapshot\" was written by MSG organist Ray Castoldi.","The \"Hey!\" chant and white towels."]},
+ {id:"PHI",n:"Philadelphia Flyers",d:"Metropolitan",a:"Xfinity Mobile Arena",c:["#F74902","#000000"],song:["Ain't Talkin' 'Bout Love","Van Halen"],horn:{f:117,ch:[1,1.19,1.5],b:[[3.8,0]],tone:.6,scoop:1},fx:[],pre:[],
+  conf:["2025-26; 2026-27 unconfirmed","u","https://hockeygoalsongs.com/philadelphia-flyers-goal-songs.html"],
+  cues:[["Maria (I Like It Loud)","Scooter","Reported but unconfirmed for 2026-27"]],trad:["Gritty celebrates goals.","Fan reports suggest a switch to Scooter's \"Maria\" in 2026-27; unconfirmed."]},
+ {id:"PIT",n:"Pittsburgh Penguins",d:"Metropolitan",a:"PPG Paints Arena",c:["#FCB514","#000000"],song:["Party Hard","Andrew W.K."],horn:{f:139,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.65,scoop:1},fx:[],pre:[],
+  conf:["Back since 2020-21; not re-dated","u","https://www.cbsnews.com/pittsburgh/news/penguins-bring-back-party-hard/"],
+  cues:[],trad:["\"Party Hard\" returned as the goal song in 2020-21.","\"Let's go Pens!\" chant."]},
+ {id:"WSH",n:"Washington Capitals",d:"Metropolitan",a:"Capital One Arena",c:["#C8102E","#041E42"],song:["Player goal songs","Default: Kickstart My Heart (Mötley Crüe)"],horn:{f:117,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.6,scoop:1},fx:[],pre:[],
+  conf:["Song list from 2024-25","u","https://thehockeynews.com/nhl/washington-capitals/latest-news/washington-capitals-goal-songs-2024-25"],
+  cues:[["Johnny B. Goode","Chuck Berry","John Carlson's goal song"]],trad:["Each scorer has their own song; \"Kickstart My Heart\" covers call-ups.","Fans shout \"RED!\" during the anthem."]},
  // CENTRAL
- {id:"CHI",n:"Chicago Blackhawks",d:"Central",a:"United Center",c:["#CF0A2C","#000000"],song:["Chelsea Dagger","The Fratellis"],horn:{f:92,ch:[1,1.2,1.5,2],b:[[5.2,0]],tone:.4,scoop:1.6},fx:[],
-  cues:[],trad:["Fans cheer through the entire national anthem.","\"Chelsea Dagger\" singalong (\"da da da…\").","Huge, very loud ship-style horn."]},
- {id:"COL",n:"Colorado Avalanche",d:"Central",a:"Ball Arena",c:["#6F263D","#236192"],song:["Chase the Sun","Planet Funk"],horn:{f:123,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.55,scoop:1},fx:[],
-  cues:[],trad:["Crowd yells \"HEY!\" on each beat of \"Chase the Sun\".","Bernie the St. Bernard on the glass.","\"Go Avs Go!\" chant."]},
- {id:"DAL",n:"Dallas Stars",d:"Central",a:"American Airlines Center",c:["#006847","#8F8F8C"],song:["Puck Off","Pantera"],horn:{f:110,ch:[1,1.19,1.5],b:[[3.8,0]],tone:.55,scoop:1},fx:[],
-  cues:[],trad:["Fans shout \"STARS!\" at \"o'er the land of the free\" in the anthem.","Pantera wrote \"Puck Off\" for the team.","\"Let's go Stars!\" chant."]},
- {id:"MIN",n:"Minnesota Wild",d:"Central",a:"Xcel Energy Center",c:["#154734","#A6192E"],song:["Shout","The Isley Brothers"],horn:{f:131,ch:[1,1.26,1.5],b:[[3.4,0]],tone:.55,scoop:1},fx:["howl"],
-  cues:[["Let's Play Hockey","PA call","\"Let's play hockey!\" before puck drop"]],trad:["Crowd jumps for \"Shout\" (\"a little bit softer now…\").","A wolf howl follows the horn.","\"Let's play hockey!\" before puck drop."]},
- {id:"NSH",n:"Nashville Predators",d:"Central",a:"Bridgestone Arena",c:["#FFB81C","#041E42"],song:["I Like It, I Love It","Tim McGraw"],horn:{f:139,ch:[1,1.26,1.5],b:[[3,0]],tone:.6,scoop:1},fx:["roar"],
-  cues:[["Gold on the Ceiling","The Black Keys","Also used as a goal song"]],trad:["Fans sing \"I like it, I love it\" then count the goals.","Catfish thrown on the ice.","A saber-tooth roar plays after goals."]},
- {id:"STL",n:"St. Louis Blues",d:"Central",a:"Enterprise Center",c:["#002F87","#FCB514"],song:["Let's Go Blues","The Urge"],horn:{f:117,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.55,scoop:1},fx:[],
-  cues:[["Gloria","Laura Branigan","Plays after every home win since 2019"]],trad:["\"Gloria\" after every home win.","\"Let's go Blues!\" chant on the organ.","Fans say \"BLUES!\" in the anthem."]},
- {id:"UTA",n:"Utah Mammoth",d:"Central",a:"Delta Center",c:["#71AFE5","#090909"],song:["Pretty Handsome Awkward","The Used"],horn:{f:104,ch:[1,1.19,1.5,2],b:[[3.8,0]],tone:.5,scoop:1.2},fx:["trumpet"],
-  cues:[["Papi","KAAZE ft. Alina Pozi","Inaugural-season goal song"]],trad:["New four-horn goal horn installed with the Delta Center renovation.","A mammoth trumpet follows goals.","Tusky the mascot debuted in 2025-26."]},
- {id:"WPG",n:"Winnipeg Jets",d:"Central",a:"Canada Life Centre",c:["#041E42","#AC162C"],song:["Player goal songs","Each scorer has their own"],horn:{f:110,ch:[1,1.26,1.5],b:[[3.8,0]],tone:.55,scoop:1},fx:["jet"],
-  cues:[["Whiteout","Playoff tradition","Every fan wears white"]],trad:["Fans shout \"TRUE NORTH!\" during O Canada.","Each scorer has their own song since 2022-23.","Playoff Whiteout."]},
+ {id:"CHI",n:"Chicago Blackhawks",d:"Central",a:"United Center",c:["#CF0A2C","#000000"],song:["Chelsea Dagger","The Fratellis"],horn:{f:92,ch:[1,1.2,1.5,2],b:[[5,0]],tone:.4,scoop:1.6},fx:[],pre:[],
+  conf:["Last confirmed 2025-26","r","https://thehockeywriters.com/blackhawks-should-find-a-new-goal-song/"],
+  cues:[],trad:["\"Chelsea Dagger\" singalong.","Fans cheer through the national anthem.","Loud horn fired from the scoreboard."]},
+ {id:"COL",n:"Colorado Avalanche",d:"Central",a:"Ball Arena",c:["#6F263D","#236192"],song:["Chase the Sun","Planet Funk"],horn:{f:123,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.55,scoop:1},fx:[],pre:[],
+  conf:["Last confirmed 2024-25","u","https://thehockeywriters.com/nhl-playoff-teams-goal-songs-ranked-2025/"],
+  cues:[["All the Small Things","Blink-182","Third-period singalong"]],trad:["Crowd yells \"HEY!\" on the beat of \"Chase the Sun\".","\"Woot woot\" exchange between the PA announcer and fans.","\"All the Small Things\" singalong in the third period."]},
+ {id:"DAL",n:"Dallas Stars",d:"Central",a:"American Airlines Center",c:["#006847","#8F8F8C"],song:["Puck Off","Pantera"],horn:{f:110,ch:[1,1.19,1.5],b:[[4,0]],tone:.5,scoop:1},fx:[],pre:[],
+  conf:["Confirmed 2025-26","r","https://theleadsm.com/who-has-the-nhls-top-10-goal-horns/"],
+  cues:[],trad:["Smooth, \"majestic\" horn that sounds once per goal.","Pantera wrote \"Puck Off\" for the team.","Fans shout \"STARS!\" in the anthem."]},
+ {id:"MIN",n:"Minnesota Wild",d:"Central",a:"Grand Casino Arena",c:["#154734","#A6192E"],song:["Shout","The Isley Brothers"],horn:{f:131,ch:[1,1.26,1.5],b:[[2.4,.3],[.8,.3],[1.6,0]],tone:.55,scoop:1},fx:[],pre:["lighthouse"],
+  conf:["Reported 2026-27 (unofficial)","u","https://www.stadiumjourney.com/stadiums/grand-casino-arena-minnesota-wild"],
+  cues:[],trad:["Three-blast horn: long, short, medium.","Lighthouse foghorn and fog before puck drop.","Crowd jumps to \"Shout\"."]},
+ {id:"NSH",n:"Nashville Predators",d:"Central",a:"Bridgestone Arena",c:["#FFB81C","#041E42"],song:["I Like It, I Love It","Tim McGraw (Preds lyrics)"],horn:{f:139,ch:[1,1.26,1.5],b:[[4,0]],tone:.6,scoop:1},fx:[],pre:[],
+  conf:["Confirmed 2025-26","r","https://www.nhl.com/predators/news/bridgestone-arena-to-celebrate-30-years-in-2026-2025-12-19"],
+  cues:[],trad:["Single long, powerful blast.","Fans taunt the opposing goalie after the song.","Catfish thrown on the ice; cryo-cannons added in 2025-26."]},
+ {id:"STL",n:"St. Louis Blues",d:"Central",a:"Enterprise Center",c:["#002F87","#FCB514"],song:["Let's Go Blues","The Urge"],horn:{f:117,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.55,scoop:1},fx:[],pre:[],
+  conf:["Last confirmed 2024-25","u","https://thehockeywriters.com/nhl-playoff-teams-goal-songs-ranked-2025/"],
+  cues:[["Country Roads","John Denver","Crowd singalong"],["Gloria","Laura Branigan","Victory song from the 2019 Cup run"]],trad:["A PA chime rings once for each home goal.","\"Country Roads\" singalong.","\"Gloria\" became the 2019 Cup-run victory song."]},
+ {id:"UTA",n:"Utah Mammoth",d:"Central",a:"Delta Center",c:["#71AFE5","#090909"],song:["Pretty Handsome Awkward","The Used"],horn:{f:110,ch:[1,1.19,1.5,1.78],b:[[3.8,0]],tone:.55,scoop:1.2},fx:[],pre:[],
+  conf:["Confirmed 2025-26 + playoffs","r","https://www.deseret.com/sports/2026/04/25/utah-mammoth-home-playoff-atmosphere/"],
+  cues:[],trad:["New four-horn horn in the rafters (KSL, Oct 2025).","\"Veggie\" chant for Vejmelka, with vegetables thrown.","Tusky rides the \"Zammoth\" after wins."]},
+ {id:"WPG",n:"Winnipeg Jets",d:"Central",a:"Canada Life Centre",c:["#041E42","#AC162C"],song:["Gonna Celebrate → scorer's song","The Phantoms"],horn:{f:156,ch:[1,1.26,1.5,1.89],b:[[3.4,0]],tone:.75,scoop:.6},fx:["jet"],pre:[],
+  conf:["Last confirmed 2025-26","r","https://globalnews.ca/news/9230984/winnipeg-jets-goal-songs/"],
+  cues:[],trad:["Light, airy horn: the same type as Canadian Pacific Railway trains.","Horn, then \"Gonna Celebrate\", then a jet-engine whoosh, then the scorer's own song.","Playoff Whiteout."]},
  // PACIFIC
- {id:"ANA",n:"Anaheim Ducks",d:"Pacific",a:"Honda Center",c:["#F47A38","#000000"],song:["Bro Hymn","Pennywise"],horn:{f:131,ch:[1,1.26,1.5],b:[[3.4,0]],tone:.6,scoop:1},fx:["quack"],
-  cues:[],trad:["Fans sing the \"whoa-oh-oh\" from \"Bro Hymn\".","A duck call plays with the horn.","\"Let's go Ducks!\" chant."]},
- {id:"CGY",n:"Calgary Flames",d:"Pacific",a:"Scotiabank Saddledome",c:["#C8102E","#F1BE48"],song:["TNT","AC/DC"],horn:{f:117,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.6,scoop:1},fx:["fire"],
-  cues:[],trad:["\"C of Red\": fans wear red.","Flame bursts from the roof after goals.","Crowd yells \"OI!\" with \"TNT\"."]},
- {id:"EDM",n:"Edmonton Oilers",d:"Pacific",a:"Rogers Place",c:["#FF4C00","#041E42"],song:["Fluxland","XL"],horn:{f:123,ch:[1,1.19,1.5],b:[[3.6,0]],tone:.55,scoop:1},fx:[],
-  cues:[],trad:["\"Let's go Oilers!\" chant.","Fans sing O Canada as one.","Ice District fills for playoff watch parties."]},
- {id:"LAK",n:"Los Angeles Kings",d:"Pacific",a:"Crypto.com Arena",c:["#111111","#A2AAAD"],song:["Power Ride","Fred Coury"],horn:{f:117,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.55,scoop:1},fx:[],
-  cues:[],trad:["\"Go Kings Go!\" chant.","Organ \"Charge!\" calls.","Bailey the lion celebrates goals."]},
- {id:"SJS",n:"San Jose Sharks",d:"Pacific",a:"SAP Center",c:["#006D75","#000000"],song:["Power Bite","Introduced 2025"],horn:{f:98,ch:[1,1.2,1.5],b:[[4.2,0]],tone:.45,scoop:1.4},fx:["foghorn"],
-  cues:[["Get Ready for This","2 Unlimited","Goal song before 2025"]],trad:["Players skate out through a giant shark head.","Fans do the \"chomp\" with both arms.","Foghorn-style horn."]},
- {id:"SEA",n:"Seattle Kraken",d:"Pacific",a:"Climate Pledge Arena",c:["#001628","#99D9D9"],song:["Lithium","Nirvana"],horn:{f:110,ch:[1,1.19,1.5],b:[[3.6,0]],tone:.5,scoop:1},fx:["foghorn"],
-  cues:[],trad:["Nirvana's \"Lithium\" nods to Seattle grunge.","Celebrity guests sound a giant foghorn before puck drop.","\"Release the Kraken!\" chant."]},
- {id:"VAN",n:"Vancouver Canucks",d:"Pacific",a:"Rogers Arena",c:["#00205B","#00843D"],song:["Don't You Forget About Me","Simple Minds"],horn:{f:104,ch:[1,1.26,1.5],b:[[4.2,0]],tone:.5,scoop:1.2},fx:[],
-  cues:[],trad:["Fans sing \"hey hey hey hey\" with the song.","\"Go Canucks Go!\" chant.","Green Men in the stands (classic era)."]},
- {id:"VGK",n:"Vegas Golden Knights",d:"Pacific",a:"T-Mobile Arena",c:["#B4975A","#333F42"],song:["Vegas Lights","Panic! at the Disco"],horn:{f:131,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.6,scoop:1},fx:[],
-  cues:[],trad:["Pregame knight battle show on the ice.","\"Knight Time\" in the arena.","Fans chant \"Go Knights Go!\"."]},
+ {id:"ANA",n:"Anaheim Ducks",d:"Pacific",a:"Honda Center",c:["#F47A38","#000000"],song:["Coming For You","The Offspring"],horn:{f:73,ch:[1,1.5,2],b:[[4.2,0]],tone:.3,scoop:1.2},fx:[],pre:[],
+  conf:["Last confirmed 2025-26","r","https://thehockeywriters.com/ducks-embrace-orange-county-culture-with-new-goal-song/"],
+  cues:[["Bro Hymn","Pennywise","Previous goal song"]],trad:["Very deep, tuba-like foghorn.","\"Coming For You\" by Orange County's own Offspring replaced \"Bro Hymn\"."]},
+ {id:"CGY",n:"Calgary Flames",d:"Pacific",a:"Scotiabank Saddledome",c:["#C8102E","#F1BE48"],song:["T.N.T.","AC/DC"],horn:{f:117,ch:[1,1.19,1.5,2],b:[[4,0]],tone:.5,scoop:1.2},fx:[],pre:[],
+  conf:["Since 2015-16; not re-dated","u","https://flamesnation.ca/news/should-the-calgary-flames-change-their-goal-song"],
+  cues:[],trad:["2026-27 is the final Saddledome season; Scotia Place opens in 2027-28.","Iconic Saddledome horn (Toronto's new horn copies it).","\"C of Red\" and the Red Mile."]},
+ {id:"EDM",n:"Edmonton Oilers",d:"Pacific",a:"Rogers Place",c:["#FF4C00","#041E42"],song:["Striking Oil","Royal Tusk"],horn:{f:175,ch:[1,1.26,1.5],b:[[3.4,0]],tone:.8,scoop:.8},fx:[],pre:[],
+  conf:["Verified 2026-27","v","https://www.nhl.com/oilers/video/the-story-behind-the-new-oilers-goal-song-6406052808112"],
+  cues:[["Fluxland","XL","Retired goal song"]],trad:["\"Striking Oil\" was written for the team by Edmonton band Royal Tusk and debuted at the 2026 home opener.","High-pitched horn."]},
+ {id:"LAK",n:"Los Angeles Kings",d:"Pacific",a:"Crypto.com Arena",c:["#111111","#A2AAAD"],song:["Power Ride 22","Fred Coury"],horn:{f:117,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.55,scoop:1},fx:[],pre:[],
+  conf:["Conflicting sources","u","https://open.spotify.com/album/5fQc58uNyVwWd9ExMCp6i1"],
+  cues:[["Hey, Hey","Twilight Trio","Named as the goal song by one 2025 source"],["Fear of the Dark","Iron Maiden","Licensed for in-game use in 2025-26"]],trad:["Sources disagree between \"Power Ride 22\" and \"Hey, Hey\".","Iron Maiden's \"Fear of the Dark\" plays in-game."]},
+ {id:"SJS",n:"San Jose Sharks",d:"Pacific",a:"SAP Center",c:["#006D75","#000000"],song:["Holiday","Green Day"],horn:{f:104,ch:[1,1.2,1.5],b:[[4,0]],tone:.5,scoop:1.2},fx:[],pre:[],
+  conf:["Verified 2026-27","v","https://thehockeynews.com/nhl/san-jose-sharks/latest-news/a-holiday-in-san-jose-mason-marchment-debuts-sharks-new-goal-song"],
+  cues:[["Power Bite","Bvrnout","2025-26 goal song, retired"]],trad:["\"Holiday\" returned on Oct 1, 2026 (also the 2006-07 goal song).","\"Power Bite\" was retired after one season.","Players skate out through the shark head."]},
+ {id:"SEA",n:"Seattle Kraken",d:"Pacific",a:"Climate Pledge Arena",c:["#001628","#99D9D9"],song:["Lithium (\"Let's Go Kraken\")","Nirvana"],horn:{f:78,ch:[1,1.26,1.5],b:[[4.4,0]],tone:.35,scoop:1},fx:[],pre:[],
+  conf:["Last confirmed 2024","u","https://www.nhl.com/kraken/news/seattle-kraken-in-game-entertainment-climate-pledge-arena-ft"],
+  cues:[],trad:["The goal horn is the real ferry horn from the retired Washington State ferry MV Hyak.","\"Lithium\" reworked as \"Let's Go Kraken\"."]},
+ {id:"VAN",n:"Vancouver Canucks",d:"Pacific",a:"Rogers Arena",c:["#00205B","#00843D"],song:["Don't You (Forget About Me)","Simple Minds"],horn:{f:104,ch:[1,1.26,1.5],b:[[4,0]],tone:.5,scoop:1.2},fx:[],pre:[],
+  conf:["Confirmed 2025-26","r","https://sidelinedj.com/blog/nhl-goal-songs-by-team.html"],
+  cues:[],trad:["Goal song since December 2021.","Fans sing \"hey hey hey hey\" with it."]},
+ {id:"VGK",n:"Vegas Golden Knights",d:"Pacific",a:"T-Mobile Arena",c:["#B4975A","#333F42"],song:["Vegas Lights","Panic! at the Disco"],horn:{f:131,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.6,scoop:1},fx:["slots"],pre:[],
+  conf:["Last confirmed 2025-26","r","https://thehockeywriters.com/nhl-playoff-teams-goal-songs-ranked-2025/"],
+  cues:[],trad:["Cash-register and slot-machine sounds play during the scorer call.","Pregame knight show on the ice."]},
 ];
 const DIVS=["Atlantic","Metropolitan","Central","Pacific"];
 
@@ -373,7 +407,11 @@ function jet(t){const n=noise(),bp=ctx.createBiquadFilter();bp.type='bandpass';b
   const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.8,t+1.8);g.gain.exponentialRampToValueAtTime(.001,t+3.6);n.connect(bp).connect(g).connect(bus());n.start(t);track(n,t+3.7)}
 function fire(t){for(let k=0;k<3;k++){const ts=t+k*.45,n=noise(),bp=ctx.createBiquadFilter();bp.type='lowpass';bp.frequency.setValueAtTime(1800,ts);bp.frequency.exponentialRampToValueAtTime(300,ts+.6);const g=ctx.createGain();g.gain.setValueAtTime(1,ts);g.gain.exponentialRampToValueAtTime(.001,ts+.7);n.connect(bp).connect(g).connect(bus());n.start(ts);track(n,ts+.75)}}
 function buzzer(t){const o=ctx.createOscillator();o.type='square';o.frequency.value=196;const o2=ctx.createOscillator();o2.type='square';o2.frequency.value=233;const g=ctx.createGain();g.gain.setValueAtTime(.18,t);g.gain.setValueAtTime(.18,t+2.4);g.gain.linearRampToValueAtTime(0,t+2.5);o.connect(g);o2.connect(g);g.connect(bus());o.start(t);o2.start(t);track(o,t+2.5);track(o2,t+2.5)}
-const FX={cannon,tesla,thunder,siren,roar,howl,quack,foghorn,trumpet,jet,fire};
+function slots(t){ // register cha-ching + slot-machine bells
+  [[2093,0],[2637,.06]].forEach(([f,o])=>{const x=ctx.createOscillator();x.type='triangle';x.frequency.value=f;const g=ctx.createGain();g.gain.setValueAtTime(.3,t+o);g.gain.exponentialRampToValueAtTime(.001,t+o+.9);x.connect(g).connect(bus());x.start(t+o);track(x,t+o+1)});
+  for(let k=0;k<14;k++){const ts=t+.35+k*.07,x=ctx.createOscillator();x.type='square';x.frequency.value=[1319,1568,1760,2093][k%4];const g=ctx.createGain();g.gain.setValueAtTime(.07,ts);g.gain.exponentialRampToValueAtTime(.001,ts+.12);x.connect(g).connect(bus());x.start(ts);track(x,ts+.13)}}
+function lighthouse(t){foghorn(t);foghorn(t+3.4)}
+const FX={cannon,tesla,thunder,siren,roar,howl,quack,foghorn,trumpet,jet,fire,slots,lighthouse};
 
 /* Public-domain organ cues and chant rhythms */
 const ORGAN={
@@ -410,7 +448,7 @@ function setTeam(t){
   $('tdiv').textContent=t.d+" Division · "+t.id;$('tname').textContent=t.n;$('tarena').textContent=t.a;
   const h=t.horn,blasts=h.b.length,len=h.b.reduce((s,[d,g])=>s+d+g,0).toFixed(1);
   $('tmeta').innerHTML=`<span class="chip">HORN ${blasts>1?blasts+' BLASTS':'1 BLAST'} · ${len}s</span><span class="chip">FUND ${h.f} Hz</span>`+
-    t.fx.map(f=>`<span class="chip">+ ${f.toUpperCase()}</span>`).join('')+(clips[t.id+':h']?'<span class="chip user">YOUR HORN FILE</span>':'')+(clips[t.id+':s']?'<span class="chip user">YOUR SONG FILE</span>':'');
+    t.fx.map(f=>`<span class="chip">+ ${fxName[f].toUpperCase()}</span>`).join('')+`<a class="chip conf ${t.conf[1]}" href="${t.conf[2]}" target="_blank" rel="noopener" title="Source for the goal song">SONG: ${t.conf[0].toUpperCase()} ↗</a>`+(clips[t.id+':h']?'<span class="chip user">YOUR HORN FILE</span>':'')+(clips[t.id+':s']?'<span class="chip user">YOUR SONG FILE</span>':'');
   $('trad').innerHTML=t.trad.map(x=>`<li>${x}</li>`).join('');
   document.querySelectorAll('.tbtn').forEach(b=>b.setAttribute('aria-pressed',b.dataset.id===t.id));
   standby();buildPads();
@@ -422,7 +460,8 @@ function buildPads(){
   const t=cur,P=[
    {k:'1',cls:'team',b:'Horn (hold)',s:'Sounds while held',hold:true},
    {k:'2',cls:'team',b:'Programmed horn',s:hornDesc(t)+' + crowd',fn:at=>{const e=hornOrClip(at);if($('crowdOn').checked)crowd(at+.2,7);return e}},
-   ...t.fx.map((f,i)=>({k:'',cls:'team',b:fxName[f],s:'Arena effect',fn:at=>(FX[f](at),at+3)})),
+   ...t.fx.map(f=>({k:'',cls:'team',b:fxName[f],s:'Fires with goals',fn:at=>(FX[f](at),at+3)})),
+   ...t.pre.map(f=>({k:'',cls:'team',b:fxName[f],s:'Pregame',fn:at=>(FX[f](at),at+4)})),
    {k:'3',b:'Charge!',s:'Organ',fn:at=>ORGAN.charge(at)},
    {k:'4',b:`Let's go ${short(t)}`,s:'Organ + claps',fn:at=>ORGAN.letsgo(at)},
    {k:'5',b:'Mexican Hat Dance',s:'Organ',fn:at=>ORGAN.hat(at)},
@@ -445,7 +484,7 @@ function buildPads(){
     if(p.k)el.dataset.key=p.k;$('pads').appendChild(el)});
   window._pads=P;
 }
-const fxName={cannon:'Cannon fire',tesla:'Tesla coils',thunder:'Thunder',siren:'Hurricane siren',roar:'Cat roar',howl:'Wolf howl',quack:'Duck call',foghorn:'Foghorn',trumpet:'Mammoth trumpet',jet:'Jet flyover',fire:'Flame cannons'};
+const fxName={slots:'Slot machines',lighthouse:'Lighthouse foghorn',cannon:'Cannon fire',tesla:'Tesla coils',thunder:'Thunder',siren:'Storm siren',roar:'Cat roar',howl:'Wolf howl',quack:'Duck call',foghorn:'Foghorn',trumpet:'Mammoth trumpet',jet:'Jet flyover',fire:'Flame cannons'};
 function short(t){return t.n.split(' ').slice(-1)[0].replace('Canadiens','Habs')}
 function hornOrClip(at){if(clips[cur.id+':h']){playClip(clips[cur.id+':h'],at);return at+4}return horn(cur.horn,at)}
 function triggerPad(p,el){initAudio();ctx.resume();const end=p.fn(ctx.currentTime+.03);el.classList.add('hit','playing');setTimeout(()=>el.classList.remove('hit'),120);
