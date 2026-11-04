@@ -186,7 +186,7 @@ input[type=checkbox]{accent-color:var(--amber)}
           <p class="small">Song files play right after the horn during GOAL, like the real sequence. "Load many…" takes a batch of files named by team code, like <code>BOS-horn.mp3</code> and <code>BOS-song.mp3</code>. Everything runs offline; files stay in this browser. Use clips you own or have the right to use.</p>
         </div>
       </div>
-      <p class="small">Team data checked November 4, 2026. Each team's song chip shows how well it is sourced (green: verified 2026-27, blue: last confirmed 2025-26, amber: unofficial, older or conflicting) and links to the source. Teams can change songs mid-season. Without a loaded song file, song titles link to an online search (the only part that needs a connection). Synthesized horns are approximations, not recordings. Not affiliated with the NHL or any team.</p>
+      <p class="small">Team data checked November 4, 2026 against team sites, news, the Sideline DJ 2026-27 guide and season horn uploads. Each team's song chip shows how well it is sourced (green: verified 2026-27, blue: last confirmed 2025-26, amber: unofficial, older or conflicting) and links to the source. Teams can change songs mid-season. Without a loaded song file, song titles link to an online search (the only part that needs a connection). Synthesized horns are approximations, not recordings. Not affiliated with the NHL or any team.</p>
     </section>
   </div>
 </div>
@@ -201,13 +201,13 @@ input[type=checkbox]{accent-color:var(--amber)}
 const T=[
  // ATLANTIC
  {id:"BOS",n:"Boston Bruins",d:"Atlantic",a:"TD Garden",c:["#FFB81C","#111111"],song:["Kernkraft 400","Zombie Nation"],horn:{f:110,ch:[1,1.26,1.5],b:[[4.2,0]],tone:.5,scoop:1.2},fx:[],pre:[],
-  conf:["Confirmed 2025-26","r","https://theleadsm.com/who-has-the-nhls-top-10-goal-horns/"],
+  conf:["Reported 2026-27","r","https://www.youtube.com/watch?v=0WufpWr6IrU"],
   cues:[["Dirty Water","The Standells","After every home win since 1995"]],trad:["\"Kernkraft 400\" is the goal song; the crowd chants the hook.","\"Dirty Water\" plays after every home win.","Bold, deep horn (Team USA borrowed it at the 4 Nations Face-Off)."]},
  {id:"BUF",n:"Buffalo Sabres",d:"Atlantic",a:"KeyBank Center",c:["#003087","#FFB81C"],song:["Kickstart My Heart","Mötley Crüe"],horn:{f:131,ch:[1,1.19,1.5],b:[[3.6,0]],tone:.6,scoop:1},fx:[],pre:[],
   conf:["Fan vote, 2025-26","r","https://x.com/BuffaloSabres/status/1976394342697930763"],
   cues:[["Song 2","Blur","Goal song for black-and-red games"]],trad:["Fans voted to keep \"Kickstart My Heart\" for blue-and-gold games in 2025-26.","\"Song 2\" plays when the Sabres wear black and red.","Powerful mid-pitch horn that fans describe as vibrating the building."]},
  {id:"DET",n:"Detroit Red Wings",d:"Atlantic",a:"Little Caesars Arena",c:["#CE1126","#FFFFFF"],song:["Without Me","Eminem"],horn:{f:98,ch:[1,1.2,1.5,2],b:[[4.4,0]],tone:.45,scoop:1.4},fx:[],pre:[],
-  conf:["Reported 2026-27 (unofficial)","u","https://hockeygoalsongs.com/detroit-red-wings-goal-songs.html"],
+  conf:["Reported 2026-27","r","https://www.youtube.com/watch?v=Spzvmkvjixw"],
   cues:[],trad:["Eminem's \"Without Me\" is the goal song.","Octopus throwing is a tradition dating to 1952."]},
  {id:"FLA",n:"Florida Panthers",d:"Atlantic",a:"Amerant Bank Arena",c:["#C8102E","#B9975B"],song:["Panthers Pulse","Öwnboss & Selva"],horn:{f:139,ch:[1,1.25,1.5],b:[[3.6,0]],tone:.7,scoop:1},fx:[],pre:[],
   conf:["Confirmed 2025-26","r","https://thehockeynews.com/nhl/florida-panthers"],
@@ -222,8 +222,8 @@ const T=[
   conf:["Confirmed 2025-26","r","https://www.nhl.com/lightning/news/the-2026-lightning-home-opener-pregame-guide"],
   cues:[["Thunderstruck","AC/DC","Plays with the opening video"],["Goons","Mona","Goal song 2017-18 to 2024-25"]],trad:["Tesla coils above the ice fire after goals.","Strong bass horn \"with a hint of electricity\".","\"Thunderstruck\" plays with the opening video."]},
  {id:"TOR",n:"Toronto Maple Leafs",d:"Atlantic",a:"Scotiabank Arena",c:["#00205B","#FFFFFF"],song:["Maria (I Like It Loud)","Scooter"],horn:{f:117,ch:[1,1.19,1.5,2],b:[[4,0]],tone:.5,scoop:1.2},fx:[],pre:[],
-  conf:["2026-27 per reporter (unofficial)","u","https://x.com/lukefoxjukebox/status/2105111955031613609"],
-  cues:[["Panama","Van Halen","Goal song in 2025 and the 2025 playoffs"]],trad:["New horn for 2026-27, which fans say sounds like Calgary's Saddledome horn.","\"Go Leafs Go!\" chant."]},
+  conf:["Reported 2026-27; not officially announced","u","https://x.com/lukefoxjukebox/status/2105111955031613609"],
+  cues:[["Panama","Van Halen","Goal song in 2025 and the 2025 playoffs"]],trad:["New goal horn debuted at the 2026-27 home opener; fans say it sounds like Calgary's.","Journalist Luke Fox reported \"Maria (I Like It Loud)\" as the new song on Sep 30, 2026.","\"Go Leafs Go!\" chant."]},
  // METROPOLITAN
  {id:"CAR",n:"Carolina Hurricanes",d:"Metropolitan",a:"Lenovo Center",c:["#CC0000","#000000"],song:["Raise Up","Petey Pablo"],horn:{f:147,ch:[1,1.26,1.5],b:[[3.2,0]],tone:.65,scoop:1},fx:[],pre:["siren"],
   conf:["Last confirmed 2025-26","r","https://abc11.com/post/history-behind-hurricanes-horn/19296322/"],
@@ -235,16 +235,16 @@ const T=[
   conf:["Last confirmed 2025-26","r","https://www.stadiumjourney.com/stadiums/prudential-center-s31"],
   cues:[],trad:["\"Howl\" by New Jersey's own Gaslight Anthem.","\"Let's go Devils!\" chant."]},
  {id:"NYI",n:"New York Islanders",d:"Metropolitan",a:"UBS Arena",c:["#00539B","#F47D30"],song:["Crowd Chant","Joe Satriani"],horn:{f:123,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.55,scoop:1},fx:[],pre:[],
-  conf:["Last confirmed 2024-25","u","https://www.youtube.com/watch?v=BepV5vMhVW4"],
+  conf:["Last confirmed 2023-24","u","https://www.youtube.com/live/EIHSd0Lejcg"],
   cues:[],trad:["Fans sing the \"whoa-oh\" of \"Crowd Chant\"."]},
  {id:"NYR",n:"New York Rangers",d:"Metropolitan",a:"Madison Square Garden",c:["#0038A8","#CE1126"],song:["Slapshot","Ray Castoldi (perf. Bad Apple)"],horn:{f:165,ch:[1,1.26,1.5],b:[[3.4,0]],tone:.75,scoop:.8},fx:[],pre:[],
   conf:["Confirmed 2025-26","r","https://theleadsm.com/which-teams-have-the-nhls-top-10-goal-songs/"],
   cues:[],trad:["The horn is based on an FDNY firetruck honk.","\"Slapshot\" was written by MSG organist Ray Castoldi.","The \"Hey!\" chant and white towels."]},
- {id:"PHI",n:"Philadelphia Flyers",d:"Metropolitan",a:"Xfinity Mobile Arena",c:["#F74902","#000000"],song:["Ain't Talkin' 'Bout Love","Van Halen"],horn:{f:117,ch:[1,1.19,1.5],b:[[3.8,0]],tone:.6,scoop:1},fx:[],pre:[],
-  conf:["2025-26; 2026-27 unconfirmed","u","https://hockeygoalsongs.com/philadelphia-flyers-goal-songs.html"],
-  cues:[["Maria (I Like It Loud)","Scooter","Reported but unconfirmed for 2026-27"]],trad:["Gritty celebrates goals.","Fan reports suggest a switch to Scooter's \"Maria\" in 2026-27; unconfirmed."]},
+ {id:"PHI",n:"Philadelphia Flyers",d:"Metropolitan",a:"Xfinity Mobile Arena",c:["#F74902","#000000"],song:["Maria (I Like It Loud)","Scooter"],horn:{f:117,ch:[1,1.19,1.5],b:[[3.8,0]],tone:.6,scoop:1},fx:[],pre:[],
+  conf:["Reported 2026-27 (fan upload only)","u","https://www.youtube.com/watch?v=U_VyMNCIUK4"],
+  cues:[["Ain't Talkin' 'Bout Love","Van Halen","2025-26 goal song"]],trad:["2026-27 brings back Scooter's \"Maria\" (the old \"Doop\" song), per fan uploads; no team announcement found.","Gritty celebrates goals."]},
  {id:"PIT",n:"Pittsburgh Penguins",d:"Metropolitan",a:"PPG Paints Arena",c:["#FCB514","#000000"],song:["Party Hard","Andrew W.K."],horn:{f:139,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.65,scoop:1},fx:[],pre:[],
-  conf:["Back since 2020-21; not re-dated","u","https://www.cbsnews.com/pittsburgh/news/penguins-bring-back-party-hard/"],
+  conf:["Reported 2026-27","r","https://www.youtube.com/watch?v=SSVPmBQlftg"],
   cues:[],trad:["\"Party Hard\" returned as the goal song in 2020-21.","\"Let's go Pens!\" chant."]},
  {id:"WSH",n:"Washington Capitals",d:"Metropolitan",a:"Capital One Arena",c:["#C8102E","#041E42"],song:["Player goal songs","Default: Kickstart My Heart (Mötley Crüe)"],horn:{f:117,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.6,scoop:1},fx:[],pre:[],
   conf:["Song list from 2024-25","u","https://thehockeynews.com/nhl/washington-capitals/latest-news/washington-capitals-goal-songs-2024-25"],
@@ -254,7 +254,7 @@ const T=[
   conf:["Last confirmed 2025-26","r","https://thehockeywriters.com/blackhawks-should-find-a-new-goal-song/"],
   cues:[],trad:["\"Chelsea Dagger\" singalong.","Fans cheer through the national anthem.","Loud horn fired from the scoreboard."]},
  {id:"COL",n:"Colorado Avalanche",d:"Central",a:"Ball Arena",c:["#6F263D","#236192"],song:["Chase the Sun","Planet Funk"],horn:{f:123,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.55,scoop:1},fx:[],pre:[],
-  conf:["Last confirmed 2024-25","u","https://thehockeywriters.com/nhl-playoff-teams-goal-songs-ranked-2025/"],
+  conf:["Last confirmed 2025-26","r","https://www.youtube.com/watch?v=qgvFMcCd9f8"],
   cues:[["All the Small Things","Blink-182","Third-period singalong"]],trad:["Crowd yells \"HEY!\" on the beat of \"Chase the Sun\".","\"Woot woot\" exchange between the PA announcer and fans.","\"All the Small Things\" singalong in the third period."]},
  {id:"DAL",n:"Dallas Stars",d:"Central",a:"American Airlines Center",c:["#006847","#8F8F8C"],song:["Puck Off","Pantera"],horn:{f:110,ch:[1,1.19,1.5],b:[[4,0]],tone:.5,scoop:1},fx:[],pre:[],
   conf:["Confirmed 2025-26","r","https://theleadsm.com/who-has-the-nhls-top-10-goal-horns/"],
@@ -285,8 +285,8 @@ const T=[
   conf:["Verified 2026-27 (NHL.com)","v","https://www.nhl.com/oilers/video/the-story-behind-the-new-oilers-goal-song-6406052808112"],
   cues:[["Fluxland","XL","Retired goal song"]],trad:["\"Striking Oil\" was written for the team by Edmonton band Royal Tusk and debuted at the 2026 home opener.","High-pitched horn."]},
  {id:"LAK",n:"Los Angeles Kings",d:"Pacific",a:"Crypto.com Arena",c:["#111111","#A2AAAD"],song:["Power Ride 22","Fred Coury"],horn:{f:117,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.55,scoop:1},fx:[],pre:[],
-  conf:["Conflicting sources","u","https://open.spotify.com/album/5fQc58uNyVwWd9ExMCp6i1"],
-  cues:[["Hey, Hey","Twilight Trio","Named as the goal song by one 2025 source"],["Fear of the Dark","Iron Maiden","Licensed for in-game use in 2025-26"]],trad:["Sources disagree between \"Power Ride 22\" and \"Hey, Hey\".","Iron Maiden's \"Fear of the Dark\" plays in-game."]},
+  conf:["Reported 2026-27","r","https://music.apple.com/us/album/power-ride-22-la-kings-goal-song-single/1780472191"],
+  cues:[["Toxicity","System of a Down","\"First Look\" intro series, 2026-27"],["Fear of the Dark","Iron Maiden","In-game song"]],trad:["\"Power Ride 22\" was written for the Kings by Fred Coury (2024).","2026-27 Saturday home games open with a new music video.","Iron Maiden's \"Fear of the Dark\" plays in-game."]},
  {id:"SJS",n:"San Jose Sharks",d:"Pacific",a:"SAP Center",c:["#006D75","#000000"],song:["Holiday","Green Day"],horn:{f:104,ch:[1,1.2,1.5],b:[[4,0]],tone:.5,scoop:1.2},fx:[],pre:[],
   conf:["Verified 2026-27","v","https://thehockeynews.com/nhl/san-jose-sharks/latest-news/a-holiday-in-san-jose-mason-marchment-debuts-sharks-new-goal-song"],
   cues:[["Power Bite","Bvrnout","2025-26 goal song, retired"]],trad:["\"Holiday\" returned on Oct 1, 2026 (also the 2006-07 goal song).","\"Power Bite\" was retired after one season.","Players skate out through the shark head."]},
@@ -294,7 +294,7 @@ const T=[
   conf:["Last confirmed 2024","u","https://www.nhl.com/kraken/news/seattle-kraken-in-game-entertainment-climate-pledge-arena-ft"],
   cues:[],trad:["The goal horn is the real ferry horn from the retired Washington State ferry MV Hyak.","\"Lithium\" reworked as \"Let's Go Kraken\"."]},
  {id:"VAN",n:"Vancouver Canucks",d:"Pacific",a:"Rogers Arena",c:["#00205B","#00843D"],song:["Don't You (Forget About Me)","Simple Minds"],horn:{f:104,ch:[1,1.26,1.5],b:[[4,0]],tone:.5,scoop:1.2},fx:[],pre:[],
-  conf:["Confirmed 2025-26","r","https://sidelinedj.com/blog/nhl-goal-songs-by-team.html"],
+  conf:["Reported 2026-27","r","https://www.youtube.com/watch?v=J8gSK3_21mU"],
   cues:[],trad:["Goal song since December 2021.","Fans sing \"hey hey hey hey\" with it."]},
  {id:"VGK",n:"Vegas Golden Knights",d:"Pacific",a:"T-Mobile Arena",c:["#B4975A","#333F42"],song:["Vegas Lights","Panic! at the Disco"],horn:{f:131,ch:[1,1.26,1.5],b:[[3.6,0]],tone:.6,scoop:1},fx:["slots"],pre:[],
   conf:["Last confirmed 2025-26","r","https://thehockeywriters.com/nhl-playoff-teams-goal-songs-ranked-2025/"],
