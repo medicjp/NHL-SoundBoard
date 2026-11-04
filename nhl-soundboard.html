@@ -173,7 +173,7 @@ input[type=checkbox]{accent-color:var(--amber)}
         </div>
         <div class="sect">
           <h2>Real horn clip</h2>
-          <p class="small" id="uplNote">The horns here are synthesized to match each arena's horn: its pitch, number of blasts, and length. For the actual recording, load an audio file you have (MP3, WAV, M4A). It replaces the synthesized horn for this team and is saved in this browser only.</p>
+          <p class="small" id="uplNote">The horns here are synthesized to match each arena's horn: its pitch, number of blasts, and length. The "2027 horn + song" pad links to a recording of the real horn and song (needs a connection). To have the actual recording on the board offline, load an audio file you have (MP3, WAV, M4A). It replaces the synthesized horn for this team and is saved in this browser only.</p>
           <div class="upl">
             <label class="btn primary" for="file">Load horn file…</label>
             <input id="file" type="file" accept="audio/*" hidden>
@@ -300,6 +300,8 @@ const T=[
   conf:["Last confirmed 2025-26","r","https://thehockeywriters.com/nhl-playoff-teams-goal-songs-ranked-2025/"],
   cues:[],trad:["Cash-register and slot-machine sounds play during the scorer call.","Pregame knight show on the ice."]},
 ];
+/* Reference recordings: "2026 - 2027 NHL Goal Horns" playlist by Elite Goal Horns (YouTube), supplied by the board's owner. Links only; needs a connection. */
+const REF={"ANA": "IhrqiCNhb5I", "BOS": "VVxPx1IPwBo", "BUF": "8LfQd8RnJ_w", "CGY": "ssd69QgU3oQ", "CAR": "Ziqv407vKUM", "CHI": "ZUE_xQq5iZ0", "COL": "0RP3GWY24SY", "CBJ": "CWzFmn5gr_w", "DAL": "0gi90MK_a3Q", "DET": "FfnqjKXFAec", "EDM": "zH7qbfwv8sY", "FLA": "ugxUO0XveXo", "LAK": "QeZOmkSjqCc", "MIN": "OzdP7wCZtZQ", "MTL": "kMH6oZeejuk", "NSH": "1TWADZMiLko", "NJD": "ujKamV91aso", "NYI": "nit9ioLT4-U", "NYR": "tTY5VDSKVxs", "OTT": "CbMrz-GmOdE", "PHI": "p6CfDP9iFec", "PIT": "PQr0ToqdtsY", "SJS": "ZWzDPKi4vgY", "SEA": "Hn2EQ80p4Yo", "STL": "RFIdeMNgGJA", "TBL": "LASk7cyRv8M", "TOR": "sPEgd9OiIU8", "UTA": "o1uNIOjoo-g", "VAN": "vVQWfBkoVns", "VGK": "8mcDlFb7ZwU", "WSH": "EEdtNobYgVE", "WPG": "3JKROtomYgU"};
 const DIVS=["Atlantic","Metropolitan","Central","Pacific"];
 
 /* ---------------- AUDIO ENGINE ---------------- */
@@ -480,6 +482,7 @@ function buildPads(){
    {k:'',b:'Period buzzer',s:'Horn-style buzzer',fn:at=>(buzzer(at),at+2.5)},
    {k:'',b:'PA: goal call',s:'Announcer (browser voice)',fn:at=>(pa(true),at+3)},
    clips[t.id+':s']?{k:'',cls:'song',b:'♪ '+t.song[0],s:t.song[1]+' · your file',fn:at=>{playClip(clips[t.id+':s'],at);return at+30}}:{k:'',cls:'song',b:'♪ '+t.song[0],s:t.song[1]+' · search online ↗',link:ytLink(t.song[0]+' '+t.song[1]+' '+t.n+' goal song')},
+   {k:'',cls:'song',b:'▶ 2027 horn + song',s:'Reference video · Elite Goal Horns ↗',link:'https://www.youtube.com/watch?v='+REF[t.id]},
    ...t.cues.map(c=>({k:'',cls:'song',b:'♪ '+c[0],s:c[2],link:ytLink(c[0]+' '+c[1]+' '+t.n)})),
   ];
   $('pads').innerHTML='';P.forEach(p=>{
