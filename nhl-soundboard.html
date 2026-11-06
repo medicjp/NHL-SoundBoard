@@ -193,9 +193,9 @@ input[type=checkbox]{accent-color:var(--amber)}
           <div class="upl">
             <button class="btn" id="exportLib">Export library</button>
             <label class="btn" for="importLib">Import library…</label>
-            <input id="importLib" type="file" accept=".nhlboard" hidden>
+            <input id="importLib" type="file" accept=".zip,application/zip" hidden>
           </div>
-          <p class="small" id="libNote">Name files with the team code or nickname plus "horn" or "song": <code>CHI-horn.mp3</code>, <code>Blackhawks song.mp3</code>. Export saves your whole library as one <code>.nhlboard</code> file to import on another device.</p>
+          <p class="small" id="libNote">Name files with the team code or nickname plus "horn" or "song": <code>CHI-horn.mp3</code>, <code>Blackhawks song.mp3</code>. Export saves your whole library as one <code>.zip</code> to import on another device.</p>
         </div>
       </div>
       <p class="small">Team data checked November 4, 2026 against the Hockey Goal Songs guide (hockeygoalsongs.com), team sites, news, the Sideline DJ 2026-27 guide, The Hockey Writers' horn ranking (Sep 2026) and season horn uploads. Horn types and blast counts follow that ranking; horn makes and models come from TheFaceoff.net's goal horn catalog, and teams with the same hardware share a voice. Each team's song chip shows how well it is sourced (green: verified 2026-27, blue: last confirmed 2025-26, amber: unofficial, older or conflicting) and links to the source. Teams can change songs mid-season. Without a loaded song file, song titles link to an online search (the only part that needs a connection). Synthesized horns are approximations, not recordings. Not affiliated with the NHL or any team.</p>
@@ -598,18 +598,39 @@ function renderLibrary(){
   $('checklist').innerHTML='';T.forEach(t=>{const b=document.createElement('button');b.className='ck';b.title=t.n;b.setAttribute('aria-current',t===cur);
     b.innerHTML=`${t.id}<i>${clips[t.id+':h']?'<b>H</b>':'·'}${clips[t.id+':s']?'<b>S</b>':'·'}</i>`;b.onclick=()=>setTeam(t);$('checklist').appendChild(b)});
 }
-/* Export/import: one file = "NHLSB1\n" + header length + "\n" + JSON header + concatenated audio bytes */
+/* Export/import as a standard .zip of named files (CHI-horn.mp3, CHI-song.mp3, ...) */
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(u){let c=0xFFFFFFFF;for(let i=0;i<u.length;i++)c=CRC[(c^u[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
+async function makeZip(entries){ // entries: [{name, blob}] stored without compression (audio is already compressed)
+  const enc=new TextEncoder(),parts=[],central=[];let off=0;
+  for(const e of entries){const data=new Uint8Array(await e.blob.arrayBuffer()),nm=enc.encode(e.name),crc=crc32(data);
+    const h=new DataView(new ArrayBuffer(30));h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x800,true);h.setUint32(14,crc,true);h.setUint32(18,data.length,true);h.setUint32(22,data.length,true);h.setUint16(26,nm.length,true);
+    parts.push(h.buffer,nm,data);
+    const c=new DataView(new ArrayBuffer(46));c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x800,true);c.setUint32(16,crc,true);c.setUint32(20,data.length,true);c.setUint32(24,data.length,true);c.setUint16(28,nm.length,true);c.setUint32(42,off,true);
+    central.push(c.buffer,nm);off+=30+nm.length+data.length}
+  const csize=central.reduce((n,x)=>n+x.byteLength,0),end=new DataView(new ArrayBuffer(22));end.setUint32(0,0x06054b50,true);end.setUint16(8,entries.length,true);end.setUint16(10,entries.length,true);end.setUint32(12,csize,true);end.setUint32(16,off,true);
+  return new Blob([...parts,...central,end.buffer],{type:'application/zip'});
+}
+async function readZip(buf){ // returns File[]; handles stored and deflated entries
+  const u=new Uint8Array(buf),v=new DataView(buf),td=new TextDecoder();let e=u.length-22;while(e>=0&&v.getUint32(e,true)!==0x06054b50)e--;if(e<0)throw new Error('not a zip');
+  const n=v.getUint16(e+10,true);let p=v.getUint32(e+16,true);const out=[];
+  for(let i=0;i<n;i++){const method=v.getUint16(p+10,true),csz=v.getUint32(p+20,true),nl=v.getUint16(p+28,true),xl=v.getUint16(p+30,true),cl=v.getUint16(p+32,true),lo=v.getUint32(p+42,true);
+    const name=td.decode(u.subarray(p+46,p+46+nl));p+=46+nl+xl+cl;if(name.endsWith('/'))continue;
+    const ds=lo+30+v.getUint16(lo+26,true)+v.getUint16(lo+28,true);let data=u.slice(ds,ds+csz);
+    if(method===8)data=new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());else if(method!==0)continue;
+    const base=name.split('/').pop(),ext=(base.match(/\.(\w+)$/)||[,''])[1].toLowerCase();
+    out.push(new File([data],base,{type:{mp3:'audio/mpeg',wav:'audio/wav',m4a:'audio/mp4',ogg:'audio/ogg',aac:'audio/aac',flac:'audio/flac'}[ext]||''}))}
+  return out;
+}
 const framed=(()=>{try{return window.self!==window.top}catch(e){return true}})();
-if(framed){$('exportLib').hidden=true;$('libNote').insertAdjacentHTML('beforeend',' Export works in the downloaded offline version of the board; here, re-load your folder instead.')}
+let downloads=null;(async()=>{try{downloads=await window.claude?.use?.('downloads')}catch(e){}if(framed&&!downloads)$('exportLib').hidden=true})();
 $('exportLib').onclick=async()=>{const keys=Object.keys(clips);if(!keys.length)return toast('Nothing to export yet');
-  const items=keys.map(k=>({k,name:clips[k].name||k,type:clips[k].type||'audio/mpeg',size:clips[k].size}));const head=JSON.stringify({v:1,items});
-  const blob=new Blob(['NHLSB1\n'+new Blob([head]).size+'\n',head,...keys.map(k=>clips[k])],{type:'application/octet-stream'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='nhl-soundboard-library.nhlboard';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);toast(`Exported ${keys.length} files`)};
-$('importLib').onchange=async()=>{const f=$('importLib').files[0];$('importLib').value='';if(!f)return;try{
-  const buf=new Uint8Array(await f.arrayBuffer()),td=new TextDecoder();if(td.decode(buf.slice(0,7))!=='NHLSB1\n')throw 0;
-  let i=7;while(buf[i]!==10)i++;const len=+td.decode(buf.slice(7,i));const head=JSON.parse(td.decode(buf.slice(i+1,i+1+len)));let o=i+1+len;
-  head.items.forEach(it=>{const file=new File([buf.slice(o,o+it.size)],it.name,{type:it.type});o+=it.size;if(/^[A-Z]{3}:[hs]$/.test(it.k)){clips[it.k]=file;dbPut(it.k,file)}});
-  setTeam(cur);toast(`Imported ${head.items.length} files`)}catch(e){toast('That file is not a board library export')}};
+  const entries=keys.map(k=>{const f=clips[k],ext=((f.name||'').match(/\.(\w+)$/)||[,'mp3'])[1].toLowerCase();return {name:`${k.slice(0,3)}-${k.endsWith(':h')?'horn':'song'}.${ext}`,blob:f}});
+  const zip=await makeZip(entries),filename='nhl-soundboard-library.zip';
+  if(downloads){try{await downloads.save({filename,data:zip});toast(`Saved ${keys.length} files`)}catch(e){if(e&&e.code!=='declined')toast('This view cannot save files');}return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(zip);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);toast(`Exported ${keys.length} files`)};
+$('importLib').onchange=async()=>{const f=$('importLib').files[0];$('importLib').value='';if(!f)return;
+  try{addFiles(await readZip(await f.arrayBuffer()))}catch(e){toast('That file is not a zip of audio files')}};
 loadFile($('songfile'),':s','Song file');
 $('clearClip').onclick=()=>{delete clips[cur.id+':h'];delete clips[cur.id+':s'];dbDel(cur.id+':h');dbDel(cur.id+':s');setTeam(cur);toast('Back to the synthesized horn')};
 
