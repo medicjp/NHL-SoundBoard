@@ -107,10 +107,14 @@ input[type=checkbox]{accent-color:var(--amber)}
 .pad.song{border-style:dashed}
 .pad.playing{box-shadow:0 0 0 2px var(--ok)}
 /* notes */
-.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;align-items:start}
 .notes ul{margin:0;padding-left:18px;display:grid;gap:6px;max-width:65ch}
 .notes li{color:var(--fg)}
 .small{font-size:12px;color:var(--dim);max-width:72ch}
+.checklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:4px}
+.ck{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:4px 6px;font-family:var(--mono);font-size:11px;display:flex;justify-content:space-between;align-items:center;gap:4px}
+.ck[aria-current=true]{border-color:var(--amber)}
+.ck i{font-style:normal;color:var(--dim);font-size:10px;letter-spacing:.02em}.ck i b{color:var(--ok);font-weight:500}
 .upl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .btn{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:7px 11px;font-size:12px}
 .btn.primary{border-color:var(--amber);color:var(--amber)}
@@ -172,18 +176,26 @@ input[type=checkbox]{accent-color:var(--amber)}
           <ul id="trad"></ul>
         </div>
         <div class="sect">
-          <h2>Real horn clip</h2>
-          <p class="small" id="uplNote">The horns here are synthesized to match each arena's horn: its pitch, number of blasts, and length. The "2027 horn + song" pad links to a recording of the real horn and song (needs a connection). To have the actual recording on the board offline, load an audio file you have (MP3, WAV, M4A). It replaces the synthesized horn for this team and is saved in this browser only.</p>
+          <h2>Your audio library <span id="libCount">0/32 HORNS · 0/32 SONGS</span></h2>
+          <p class="small">Teams without a file use the synthesized horn. Load your own real horn and song recordings to replace them. Files stay in this browser, work offline, and are never uploaded.</p>
           <div class="upl">
-            <label class="btn primary" for="file">Load horn file…</label>
+            <label class="btn primary" for="folder">Load folder…</label>
+            <input id="folder" type="file" webkitdirectory multiple hidden>
+            <label class="btn" for="bulk">Load files…</label>
+            <input id="bulk" type="file" accept="audio/*,.mp3,.wav,.m4a,.ogg,.aac,.flac" multiple hidden>
+            <label class="btn" for="file">Horn for this team…</label>
             <input id="file" type="file" accept="audio/*" hidden>
-            <label class="btn" for="songfile">Load song file…</label>
+            <label class="btn" for="songfile">Song for this team…</label>
             <input id="songfile" type="file" accept="audio/*" hidden>
-            <button class="btn" id="clearClip">Clear this team's files</button>
-            <label class="btn" for="bulk">Load many…</label>
-            <input id="bulk" type="file" accept="audio/*" multiple hidden>
+            <button class="btn" id="clearClip">Clear this team</button>
           </div>
-          <p class="small">Song files play right after the horn during GOAL, like the real sequence. "Load many…" takes a batch of files named by team code, like <code>BOS-horn.mp3</code> and <code>BOS-song.mp3</code>. Everything runs offline; files stay in this browser. Use clips you own or have the right to use.</p>
+          <div class="checklist" id="checklist" aria-label="Which teams have your files"></div>
+          <div class="upl">
+            <button class="btn" id="exportLib">Export library</button>
+            <label class="btn" for="importLib">Import library…</label>
+            <input id="importLib" type="file" accept=".nhlboard" hidden>
+          </div>
+          <p class="small" id="libNote">Name files with the team code or nickname plus "horn" or "song": <code>CHI-horn.mp3</code>, <code>Blackhawks song.mp3</code>. Export saves your whole library as one <code>.nhlboard</code> file to import on another device.</p>
         </div>
       </div>
       <p class="small">Team data checked November 4, 2026 against the Hockey Goal Songs guide (hockeygoalsongs.com), team sites, news, the Sideline DJ 2026-27 guide, The Hockey Writers' horn ranking (Sep 2026) and season horn uploads. Horn types and blast counts follow that ranking; horn makes and models come from TheFaceoff.net's goal horn catalog, and teams with the same hardware share a voice. Each team's song chip shows how well it is sourced (green: verified 2026-27, blue: last confirmed 2025-26, amber: unofficial, older or conflicting) and links to the source. Teams can change songs mid-season. Without a loaded song file, song titles link to an online search (the only part that needs a connection). Synthesized horns are approximations, not recordings. Not affiliated with the NHL or any team.</p>
@@ -464,7 +476,7 @@ function setTeam(t){
     t.fx.map(f=>`<span class="chip">+ ${fxName[f].toUpperCase()}</span>`).join('')+`<a class="chip conf ${t.conf[1]}" href="${t.conf[2]}" target="_blank" rel="noopener" title="Source for the goal song">SONG: ${t.conf[0].toUpperCase()} ↗</a>`+(clips[t.id+':h']?'<span class="chip user">YOUR HORN FILE</span>':'')+(clips[t.id+':s']?'<span class="chip user">YOUR SONG FILE</span>':'');
   $('trad').innerHTML=[`Horn: ${HW[t.id][1]} (${HW[t.id][0]==='Recording'?'played as a recording':'real horn'}, ${HW[t.id][2]}). ${HW[t.id][3]}.`,...t.trad].map(x=>`<li>${x}</li>`).join('');
   document.querySelectorAll('.tbtn').forEach(b=>b.setAttribute('aria-pressed',b.dataset.id===t.id));
-  standby();buildPads();
+  standby();buildPads();renderLibrary();
   try{localStorage.setItem('team',t.id)}catch(e){}
 }
 function standby(){$('npTag').textContent='STANDBY';$('npSong').textContent=cur.song[0];$('npArtist').textContent=cur.song[1]+' · goal song'}
@@ -567,8 +579,38 @@ document.addEventListener('keydown',e=>{if(e.target.matches('input,select,textar
 document.addEventListener('keyup',e=>{if(e.code==='Space'||e.key==='1'){e.preventDefault();holdEnd()}});
 function loadFile(input,suffix,label){input.onchange=()=>{const f=input.files[0];if(!f)return;clips[cur.id+suffix]=f;dbPut(cur.id+suffix,f);setTeam(cur);toast(`${label} loaded for ${cur.n}`);input.value=''}}
 loadFile($('file'),':h','Horn file');
-$('bulk').onchange=()=>{let n=0;[...$('bulk').files].forEach(f=>{const m=f.name.toUpperCase().match(/^([A-Z]{3})[-_ ]*(HORN|SONG)/);const t=m&&T.find(x=>x.id===m[1]);if(!t)return;const k=t.id+(m[2]==='HORN'?':h':':s');clips[k]=f;dbPut(k,f);n++});
-  $('bulk').value='';setTeam(cur);toast(n?`Loaded ${n} file${n>1?'s':''}`:'No files matched. Name them like BOS-horn.mp3 or BOS-song.mp3')};loadFile($('songfile'),':s','Song file');
+/* Library: match files to teams by code or nickname, plus "horn"/"song" */
+const NICK=Object.fromEntries(T.map(t=>[t.n.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().split(' ').slice(-1)[0],t.id]));
+function matchFile(name){
+  const u=name.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\.[A-Z0-9]+$/,'');
+  const kind=/HORN/.test(u)?':h':/SONG|MUSIC/.test(u)?':s':null;if(!kind)return null;
+  const code=u.match(/^([A-Z]{3})(?![A-Z])/);let id=code&&T.find(t=>t.id===code[1])?code[1]:null;
+  if(!id)for(const w of u.split(/[^A-Z]+/))if(NICK[w]){id=NICK[w];break}
+  return id?id+kind:null;
+}
+function addFiles(files){let n=0,skip=[];[...files].forEach(f=>{if(!/^audio\//.test(f.type)&&!/\.(mp3|wav|m4a|ogg|aac|flac)$/i.test(f.name))return;const k=matchFile(f.name);if(!k){skip.push(f.name);return}clips[k]=f;dbPut(k,f);n++});
+  setTeam(cur);toast(n?`Loaded ${n} file${n>1?'s':''}`+(skip.length?` · ${skip.length} not matched (e.g. ${skip[0]})`:''):'No files matched. Name them like CHI-horn.mp3 or Blackhawks song.mp3')}
+$('bulk').onchange=()=>{addFiles($('bulk').files);$('bulk').value=''};
+$('folder').onchange=()=>{addFiles($('folder').files);$('folder').value=''};
+function renderLibrary(){
+  const h=T.filter(t=>clips[t.id+':h']).length,sg=T.filter(t=>clips[t.id+':s']).length;
+  $('libCount').textContent=`${h}/32 HORNS · ${sg}/32 SONGS`;
+  $('checklist').innerHTML='';T.forEach(t=>{const b=document.createElement('button');b.className='ck';b.title=t.n;b.setAttribute('aria-current',t===cur);
+    b.innerHTML=`${t.id}<i>${clips[t.id+':h']?'<b>H</b>':'·'}${clips[t.id+':s']?'<b>S</b>':'·'}</i>`;b.onclick=()=>setTeam(t);$('checklist').appendChild(b)});
+}
+/* Export/import: one file = "NHLSB1\n" + header length + "\n" + JSON header + concatenated audio bytes */
+const framed=(()=>{try{return window.self!==window.top}catch(e){return true}})();
+if(framed){$('exportLib').hidden=true;$('libNote').insertAdjacentHTML('beforeend',' Export works in the downloaded offline version of the board; here, re-load your folder instead.')}
+$('exportLib').onclick=async()=>{const keys=Object.keys(clips);if(!keys.length)return toast('Nothing to export yet');
+  const items=keys.map(k=>({k,name:clips[k].name||k,type:clips[k].type||'audio/mpeg',size:clips[k].size}));const head=JSON.stringify({v:1,items});
+  const blob=new Blob(['NHLSB1\n'+new Blob([head]).size+'\n',head,...keys.map(k=>clips[k])],{type:'application/octet-stream'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='nhl-soundboard-library.nhlboard';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);toast(`Exported ${keys.length} files`)};
+$('importLib').onchange=async()=>{const f=$('importLib').files[0];$('importLib').value='';if(!f)return;try{
+  const buf=new Uint8Array(await f.arrayBuffer()),td=new TextDecoder();if(td.decode(buf.slice(0,7))!=='NHLSB1\n')throw 0;
+  let i=7;while(buf[i]!==10)i++;const len=+td.decode(buf.slice(7,i));const head=JSON.parse(td.decode(buf.slice(i+1,i+1+len)));let o=i+1+len;
+  head.items.forEach(it=>{const file=new File([buf.slice(o,o+it.size)],it.name,{type:it.type});o+=it.size;if(/^[A-Z]{3}:[hs]$/.test(it.k)){clips[it.k]=file;dbPut(it.k,file)}});
+  setTeam(cur);toast(`Imported ${head.items.length} files`)}catch(e){toast('That file is not a board library export')}};
+loadFile($('songfile'),':s','Song file');
 $('clearClip').onclick=()=>{delete clips[cur.id+':h'];delete clips[cur.id+':s'];dbDel(cur.id+':h');dbDel(cur.id+':s');setTeam(cur);toast('Back to the synthesized horn')};
 
 (async()=>{let saved;try{saved=localStorage.getItem('team')}catch(e){}
