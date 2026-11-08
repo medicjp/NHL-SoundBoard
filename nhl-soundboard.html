@@ -72,8 +72,9 @@ input[type=checkbox]{accent-color:var(--amber)}
 .tname{font-family:var(--display);font-weight:800;font-size:clamp(30px,5vw,52px);line-height:.95;text-transform:uppercase;letter-spacing:.02em;margin:4px 0 6px;text-wrap:balance}
 .arena{color:var(--dim)}
 .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+button.chip{cursor:pointer}
 .chip{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;padding:3px 7px;border-radius:3px;background:var(--panel2);border:1px solid var(--line);color:var(--fg)}
-.chip.conf{text-decoration:none}.chip.conf.v{border-color:var(--ok);color:var(--ok)}.chip.conf.r{border-color:#3b6a8a;color:#9fd0f0}.chip.conf.u{border-color:var(--amber);color:var(--amber)}
+#trad li.open{color:var(--amber)}.chip.conf{text-decoration:none}.chip.conf.v{border-color:var(--ok);color:var(--ok)}.chip.conf.r{border-color:#3b6a8a;color:#9fd0f0}.chip.conf.u{border-color:var(--amber);color:var(--amber)}
 .chip.user{border-color:var(--ok);color:var(--ok)}
 /* GOAL button + light */
 .goalwrap{display:grid;justify-items:center;gap:8px}
@@ -90,8 +91,9 @@ input[type=checkbox]{accent-color:var(--amber)}
 .np .tag{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--amber)}
 .np .song{font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:.02em;line-height:1.1;overflow-wrap:anywhere}
 .np .artist{color:var(--dim);font-size:13px}
-.npctl{display:flex;align-items:center;gap:12px}
-#songBtn{white-space:nowrap}
+.songbtn{margin-top:8px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;background:transparent;border:1px solid var(--amber);color:var(--amber);border-radius:4px;padding:6px 12px;min-height:32px}
+.songbtn.on{background:var(--amber);color:#07090b}
+.songbtn:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
 .meter{display:flex;gap:2px;height:30px;align-items:flex-end}
 .meter i{width:5px;background:var(--ok);height:8%;border-radius:1px;transition:height .06s}
 @media (max-width:620px){.np{grid-template-columns:minmax(0,1fr)}.meter{display:none}}
@@ -120,6 +122,11 @@ input[type=checkbox]{accent-color:var(--amber)}
 .upl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .btn{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:7px 11px;font-size:12px}
 .btn.primary{border-color:var(--amber);color:var(--amber)}
+.pa-set summary{list-style:none;cursor:pointer}.pa-set summary::-webkit-details-marker{display:none}
+.pa-set summary h2::after{content:" ▸";color:var(--dim)}.pa-set[open] summary h2::after{content:" ▾"}
+.pa-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px 12px}
+.pa-grid label{display:grid;gap:4px;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--dim);min-width:0}
+.pa-grid input,.pa-grid select{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:7px 8px;color:var(--fg);font:inherit;font-family:system-ui,sans-serif;font-size:13px;letter-spacing:0;min-width:0;width:100%}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#000;border:1px solid var(--line);padding:8px 14px;border-radius:4px;font-family:var(--mono);font-size:12px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
 .toast.show{opacity:1}
 .flash{position:fixed;inset:0;pointer-events:none;background:var(--team);opacity:0;mix-blend-mode:screen}
@@ -136,10 +143,10 @@ input[type=checkbox]{accent-color:var(--amber)}
     <div class="brand">NHL SoundBoard ’27<small>NHL 32-TEAM ARENA CONTROL · HOLD SPACE TO BLOW THE HORN</small></div>
     <div class="onair" id="onair"><i></i>ON AIR</div>
     <div class="ctrls">
-      <label for="vol">MASTER <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8"></label>
-      <label for="pa"><input id="pa" type="checkbox" checked> PA CALL</label>
+      <label for="vol" title="The horn always plays at full volume and songs stay 40% under it. This slider sets chants, organ, crowd sounds, effects and the PA call.">CHANTS &amp; PA <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8"></label>
+      <label for="pa" title="Off by default. Turn on to have the announcer call the goal after the horn and song end."><input id="pa" type="checkbox"> PA CALL <span id="paState">OFF</span></label>
       <label for="crowdOn"><input id="crowdOn" type="checkbox" checked> CROWD</label>
-      <label for="autoSong" title="Play the goal song automatically after the horn"><input id="autoSong" type="checkbox" checked> AUTO SONG</label>
+      <label for="autoSong" title="On: the goal song plays when the horn is released. Off: nothing plays until you press Play song or S."><input id="autoSong" type="checkbox" checked> AUTO SONG</label>
       <button class="stop" id="stopAll">■ KILL ALL</button>
     </div>
   </header>
@@ -164,8 +171,8 @@ input[type=checkbox]{accent-color:var(--amber)}
 
       <div class="np" aria-live="polite">
         <div class="tag" id="npTag">STANDBY</div>
-        <div><div class="song" id="npSong">—</div><div class="artist" id="npArtist">Goal song cue appears here</div></div>
-        <div class="npctl"><button class="btn" id="songBtn" hidden>▶ Play song</button><div class="meter" id="meter"></div></div>
+        <div><div class="song" id="npSong">—</div><div class="artist" id="npArtist">Goal song cue appears here</div><button type="button" class="songbtn" id="songBtn" hidden title="Play or stop the goal song (S key)">▶ Play song</button></div>
+        <div class="meter" id="meter"></div>
       </div>
 
       <div class="sect">
@@ -173,14 +180,30 @@ input[type=checkbox]{accent-color:var(--amber)}
         <div class="pads" id="pads"></div>
       </div>
 
+      <details class="sect pa-set" id="paSet">
+        <summary><h2>PA call <span>SCORER · ASSISTS · TIME</span></h2></summary>
+        <p class="small">The announcer reads these after the horn and the goal song finish. They're saved for each team in this browser.</p>
+        <div class="pa-grid">
+          <label>Scorer # <input id="paSn" inputmode="numeric" maxlength="2" placeholder="19"></label>
+          <label class="w">Scorer name <input id="paS" maxlength="40" placeholder="First Last"></label>
+          <label>Assist # <input id="paA1n" inputmode="numeric" maxlength="2"></label>
+          <label class="w">First assist <input id="paA1" maxlength="40" placeholder="Leave blank if unassisted"></label>
+          <label>Assist # <input id="paA2n" inputmode="numeric" maxlength="2"></label>
+          <label class="w">Second assist <input id="paA2" maxlength="40"></label>
+          <label>Time <input id="paTm" maxlength="5" placeholder="12:34"></label>
+          <label class="w">Announcer voice <select id="paVoice"><option value="">Best available</option></select></label>
+        </div>
+        <p class="small">For the most natural voice on iPad or iPhone, download an Enhanced or Premium English voice in Settings, Accessibility, Spoken Content, Voices.</p>
+      </details>
+
       <div class="cols">
         <div class="sect notes">
           <h2>In the building</h2>
           <ul id="trad"></ul>
         </div>
         <div class="sect">
-          <h2>Your audio library <span id="libCount">0/32 HORNS · 0/32 SONGS</span></h2>
-          <p class="small">Teams without a file use the synthesized horn. Load your own real horn and song recordings to replace them. Files stay in this browser, work offline, and are never uploaded.</p>
+          <h2>Your audio library <span id="libCount"></span></h2>
+          <p class="small">Load your own horn, song or chant recordings: a horn file replaces the synthesized horn, and a song file plays after the horn (or on Play song when Auto song is off). Files stay in this browser, work offline, and are never uploaded.</p>
           <div class="upl">
             <label class="btn primary" for="folder">Load folder…</label>
             <input id="folder" type="file" webkitdirectory multiple hidden>
@@ -198,17 +221,17 @@ input[type=checkbox]{accent-color:var(--amber)}
             <label class="btn" for="importLib">Import library…</label>
             <input id="importLib" type="file" accept=".zip,application/zip" hidden>
           </div>
-          <p class="small" id="libNote">Name files with the team code or nickname plus "horn" or "song": <code>CHI-horn.mp3</code>, <code>Blackhawks song.mp3</code>. Export saves your whole library as one <code>.zip</code> to import on another device.</p>
+          <p class="small" id="libNote">Name files with the team code or nickname plus "horn", "song" or "chant": <code>CHI-horn.mp3</code>, <code>Blackhawks song.mp3</code>, <code>NYR chant.mp3</code>. Export saves your whole library as one <code>.zip</code> to import on another device.</p>
         </div>
       </div>
-      <p class="small">Team data checked November 4, 2026 against the Hockey Goal Songs guide (hockeygoalsongs.com), team sites, news, the Sideline DJ 2026-27 guide, The Hockey Writers' horn ranking (Sep 2026) and season horn uploads. Horn types and blast counts follow that ranking; horn makes and models come from TheFaceoff.net's goal horn catalog, and teams with the same hardware share a voice. Each team's song chip shows how well it is sourced (green: verified 2026-27, blue: last confirmed 2025-26, amber: unofficial, older or conflicting) and links to the source. Teams can change songs mid-season. Without a loaded song file, song titles link to an online search (the only part that needs a connection). Synthesized horns are approximations, not recordings. Not affiliated with the NHL or any team.</p>
+      <p class="small">Team data checked November 6, 2026 against the Hockey Goal Songs guide (hockeygoalsongs.com), team sites and NHL.com, news, the Sideline DJ 2026-27 guide, The Hockey Writers' horn ranking (Sep 2026) and season horn uploads. Horn makes, bell pitches and blast patterns follow Horn Central's current NHL horn catalog, checked against TheFaceoff.net, maker specs, CBC and team reports; blast lengths in seconds are estimates where sources give only the pattern. Every chant, horn detail and tradition was checked a third time against current sources; lines no source supported were removed. Items marked "Still unproven" were searched on team and NHL.com pages, local news, Horn Central, Hockey Goal Songs and fan horn clips without a clear answer. Team colors follow current published values. Each team's song chip shows how well it is sourced (green: verified 2026-27, blue: last confirmed 2025-26, amber: unofficial, older or conflicting) and links to the source. Teams can change songs mid-season. Without a loaded song file, song titles link to an online search (the only part that needs a connection). Synthesized horns are approximations, not recordings. Not affiliated with the NHL or any team.</p>
     </section>
   </div>
 </div>
 <div class="toast" id="toast"></div>
 
 <script>
-/* ---------------- DATA (checked 2026-11-04) ----------------
+/* ---------------- DATA (checked 2026-11-06) ----------------
  horn: f = fundamental Hz, ch = chord ratios, b = programmed blasts [[durSec,gapAfter]...], tone = brightness 0..1, scoop = semitones rise at start
  fx: effects confirmed to fire with goals · pre: confirmed arena sounds used at other moments (pads only)
  conf: [status, level, source] — level: v = verified this season, r = last confirmed 2025-26, u = unofficial/conflicting
@@ -217,132 +240,197 @@ const T=[
  // ATLANTIC
  {id:"BOS",n:"Boston Bruins",d:"Atlantic",a:"TD Garden",c:["#FFB81C","#111111"],song:["Kernkraft 400","Zombie Nation"],horn:{f:92,ch:[1,1.5],b:[[4.2,0]],tone:0.4,scoop:1.2},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/boston-bruins-goal-songs.html"],
-  cues:[["Dirty Water","The Standells","After every home win since 1995"]],trad:["Deep, ship-like horn.","\"Kernkraft 400\" is the goal song; the crowd chants the hook.","\"Dirty Water\" plays after every home win."]},
+  cues:[["Dirty Water","The Standells","After every home win since 1995"]],trad:["A recording of a deep single-note Kahlenberg horn: two blasts of about three seconds.","\"Kernkraft 400\" is the goal song; the crowd chants the hook.","\"Dirty Water\" plays after every home win."]},
  {id:"BUF",n:"Buffalo Sabres",d:"Atlantic",a:"KeyBank Center",c:["#003087","#FFB81C"],song:["Kickstart My Heart","Mötley Crüe"],horn:{f:98,ch:[1,1.26,1.5],b:[[1.8,0.3],[1.8,0.3],[2.6,0]],tone:0.45,scoop:1.3},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/buffalo-sabres-goal-songs.html"],
-  cues:[["Song 2","Blur","Goal song for black-and-red games"]],trad:["Three long blasts, followed by Rick Jeanneret's recorded \"SCOOOORE!\" call.","Fans voted to keep \"Kickstart My Heart\" for blue-and-gold games in 2025-26.","\"Song 2\" plays when the Sabres wear black and red."]},
+  cues:[["Song 2","Blur","Goal song for black-and-red games"]],trad:["Three long blasts, followed by Rick Jeanneret's recorded \"SCOOOORE!\" call.","Fans voted to keep \"Kickstart My Heart\" for blue-and-gold games in 2025-26; it was still playing in April 2026, and no change has been reported since.","\"Song 2\" plays when the Sabres wear black and red."]},
  {id:"DET",n:"Detroit Red Wings",d:"Atlantic",a:"Little Caesars Arena",c:["#CE1126","#FFFFFF"],song:["Without Me","Eminem"],horn:{f:98,ch:[1,1.26,1.5],b:[[4.4,0]],tone:0.45,scoop:1.3},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/detroit-red-wings-goal-songs.html"],
-  cues:[],trad:["Horn modeled on the old Joe Louis Arena horn.","Eminem's \"Without Me\" is the goal song.","Octopus throwing is a tradition dating to 1952."]},
- {id:"FLA",n:"Florida Panthers",d:"Atlantic",a:"Amerant Bank Arena",c:["#C8102E","#B9975B"],song:["Panthers Pulse","Öwnboss ft. Sevek"],horn:{f:98,ch:[1,1.26,1.5,1.06],b:[[3.6,0]],tone:0.5,scoop:1.3},fx:[],pre:[],
-  conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/florida-panthers-goal-songs.html"],
-  cues:[],trad:["Horn under the custom \"Go Cats Go\" song.","\"Panthers Pulse\" is a custom remix of \"Move Your Body\", used since 2023-24.","The Palm Beach Symphony recorded an orchestral version in 2025.","Plastic rats are thrown on the ice after wins."]},
- {id:"MTL",n:"Montréal Canadiens",d:"Atlantic",a:"Bell Centre",c:["#AF1E2D","#192168"],song:["Canadiens Goal Song","Antoine Beck"],horn:{f:262,ch:[1,1.19,1.68],b:[[3.6,0]],tone:0.75,scoop:0.3},fx:[],pre:[],
-  conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/montreal-canadiens-goal-songs.html"],
-  cues:[["Le But","Loco Locass","Now used as the win song"],["Olé Olé Olé","Crowd chant","After big goals and wins"]],trad:["High-pitched train horn.","\"Olé olé olé\" chant after big goals.","\"Le But\" by Loco Locass moved to win-song duty.","The PA calls goals in French and English."],lang:"fr"},
- {id:"OTT",n:"Ottawa Senators",d:"Atlantic",a:"Canadian Tire Centre",c:["#C52032","#C2912C"],song:["Song 2","Blur"],horn:{f:247,ch:[1,1.26,1.5],b:[[4,0]],tone:0.72,scoop:0.3},fx:[],pre:[],
+  cues:[],trad:["Three blasts (Horn Central). The team says the 2023 horn is the same model as the Joe Louis Arena horn; before that, a three-blast recording of the old horn played.","Eminem's \"Without Me\" is the goal song.","Octopus throwing is a tradition dating to 1952.","Fans sing along to \"Don't Stop Believin'\" late in games when Detroit is ahead."]},
+ {id:"FLA",n:"Florida Panthers",d:"Atlantic",a:"Amerant Bank Arena",c:["#C8102E","#041E42"],song:["Panthers Pulse","Öwnboss & Selva"],horn:{f:98,ch:[1,1.26,1.5,1.06],b:[[3.6,0]],tone:0.5,scoop:1.3},fx:[],pre:["icehorn"],
+  conf:["Confirmed by the team (NHL.com)","v","https://www.nhl.com/panthers/news/palm-beach-symphony-records-58-musician-version-of-panthers-goal-song"],
+  cues:[],trad:["\"Panthers Pulse\" is a custom song by Öwnboss & Selva built on \"Move Your Body\", used since October 2023.","The Palm Beach Symphony recorded an orchestral version in 2025.","Plastic rats are thrown on the ice after wins. The horn also sounds as the team takes the ice."]},
+ {id:"MTL",n:"Montréal Canadiens",d:"Atlantic",a:"Bell Centre",c:["#AF1E2D","#192168"],song:["Hey!!","Antoine Becks"],horn:{f:262,ch:[1,1.19,1.68],b:[[3.6,0]],tone:0.75,scoop:0.3},fx:[],pre:[],
+  conf:["Newest guides; not published by the team","u","https://hockeygoalsongs.com/montreal-canadiens-goal-songs.html"],
+  cues:[["Le But","Loco Locass","Now used as the win song"]],trad:["High-pitched train horn: one long blast of 8 to 12 seconds.","Recent sources (The Hockey News, Sep 2025; EA's NHL 27 list, Sep 2026) name it \"Hey!!\" by Antoine Becks; older guides list \"Canadiens Goal Song\". The team hasn't published it.","\"Le But\" by Loco Locass moved to win-song duty.","PA announcements are made in French and English.","Organist Diane Bibeau plays alongside the arena DJ."],lang:"fr"},
+ {id:"OTT",n:"Ottawa Senators",d:"Atlantic",a:"Canadian Tire Centre",c:["#DA1A32","#B79257"],song:["Song 2","Blur"],horn:{f:247,ch:[1,1.26],b:[[4,0]],tone:0.72,scoop:0.3},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/ottawa-senators-goal-songs.html"],
-  cues:[],trad:["Full train horn.","Fans shout the \"woo-hoo\" in \"Song 2\".","\"Go Sens Go!\" chant."]},
- {id:"TBL",n:"Tampa Bay Lightning",d:"Atlantic",a:"Benchmark International Arena",c:["#002868","#FFFFFF"],song:["Burn It to the Ground","Nickelback"],horn:{f:117,ch:[1,1.19],b:[[3.8,0]],tone:0.58,scoop:0.8},fx:["tesla"],pre:[],
+  cues:[],trad:["Train horn salvaged from a VIA Rail locomotive; only two of its bells sound. Five blasts: two long, two short, one long (CBC).","Fans shout the \"woo-hoo\" in \"Song 2\".","\"Go Sens Go!\" chant.","A guest rings a rally bell in the 300 level before \"Hell's Bells\" as the team comes out."]},
+ {id:"TBL",n:"Tampa Bay Lightning",d:"Atlantic",a:"Benchmark International Arena",c:["#002868","#FFFFFF"],song:["Burn It to the Ground","Nickelback"],horn:{f:117,ch:[1,1.19],b:[[3.8,0]],tone:0.58,scoop:0.8},fx:["tesla"],pre:["tesla"],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/tampa-bay-lightning-goal-songs.html"],
-  cues:[["Thunderstruck","AC/DC","Plays with the opening video"],["Goons","Mona","Goal song 2017-18 to 2024-25"]],trad:["Two-tone horn with deep bellows.","Tesla coils above the ice fire after goals.","\"Thunderstruck\" plays with the opening video."]},
+  cues:[["Thunderstruck","AC/DC","Plays as the Thunder Kid skates a lap before the team comes out"],["Goons","Mona","Goal song 2017-18 to 2024-25"]],trad:["Deep Kahlenberg ship horn: one long blast, then a medium one (Horn Central).","Tesla coils above the ice fire after goals and during player intros.","\"Thunderstruck\" plays as a young fan, the Thunder Kid, skates a lap before the Lightning take the ice."]},
  {id:"TOR",n:"Toronto Maple Leafs",d:"Atlantic",a:"Scotiabank Arena",c:["#00205B","#FFFFFF"],song:["Maria (I Like It Loud)","Scooter"],horn:{f:156,ch:[1,1.19,1.5,1.78],b:[[4,0]],tone:0.8,scoop:0.6},fx:[],pre:[],
-  conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/toronto-maple-leafs-goal-songs.html"],
-  cues:[["Panama","Van Halen","Goal song in 2025 and the 2025 playoffs"]],trad:["New goal horn debuted at the 2026-27 home opener; fans say it sounds like Calgary's.","Journalist Luke Fox reported \"Maria (I Like It Loud)\" as the new song on Sep 30, 2026.","\"Go Leafs Go!\" chant."]},
+  conf:["Reported, not announced by the team","u","https://hockeygoalsongs.com/toronto-maple-leafs-goal-songs.html"],
+  cues:[["Panama","Van Halen","Used vs Original Six teams and in the 2025 playoff opener"]],trad:["A different goal horn has sounded since the 2026-27 home opener; Horn Central lists it as a Buell four-chime set like Calgary's, believed temporary, with the old horn kept for wins (a fan clip adds intros). The team hasn't announced a change.","Sportsnet's Luke Fox reported \"Maria (I Like It Loud)\" as the new song on opening night (Sep 29, 2026), and fan clips name it; the team hasn't announced it.","\"Go Leafs Go!\" chant."]},
  // METROPOLITAN
- {id:"CAR",n:"Carolina Hurricanes",d:"Metropolitan",a:"Lenovo Center",c:["#CC0000","#000000"],song:["Raise Up","Petey Pablo"],horn:{f:98,ch:[1,1.26,1.5,2],b:[[3.8,0]],tone:0.45,scoop:1.2},fx:[],pre:["stormsiren"],
+ {id:"CAR",n:"Carolina Hurricanes",d:"Metropolitan",a:"Lenovo Center",c:["#CE1126","#000000"],song:["Raise Up","Petey Pablo"],horn:{f:98,ch:[1,1.26,1.5,2],b:[[3.8,0]],tone:0.45,scoop:1.2},fx:[],pre:["stormsiren"],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/carolina-hurricanes-goal-songs.html"],
-  cues:[],trad:["Goal song since 2018.","Ship-style horn (no siren after goals).","A guest sounds the storm warning siren before puck drop (not after goals).","Storm Surge celebration after home wins.","Rally towels."]},
- {id:"CBJ",n:"Columbus Blue Jackets",d:"Metropolitan",a:"Nationwide Arena",c:["#002654","#CE1126"],song:["For Those About to Rock → The Whip","AC/DC → Locksley"],horn:{f:110,ch:[1,1.26,1.5],b:[[4.6,0]],tone:0.55,scoop:1},fx:["cannon"],fxAt:5,pre:[],
+  cues:[],trad:["Goal song since 2018.","Four-bell Kahlenberg horn from the Hartford Whalers days: one long blast, then two slightly shorter ones (no siren after goals).","A guest sounds the storm warning siren before puck drop (not after goals).","Storm Surge celebration after home wins.","Rally towels in the playoffs.","2026 Stanley Cup champions: beat Vegas 3-0 in Game 6 on June 14, 2026.","Superfan Big Mike blows his own horn after every goal and leads \"Let's go Canes!\"."]},
+ {id:"CBJ",n:"Columbus Blue Jackets",d:"Metropolitan",a:"Nationwide Arena",c:["#002654","#CE1126"],song:["For Those About to Rock → The Whip","AC/DC → Locksley"],horn:{f:110,ch:[1,1.26,1.5],b:[[4.6,0]],tone:0.55,scoop:1},fx:["cannon"],fxAt:5.9,pre:["cannon"],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/columbus-blue-jackets-goal-songs.html"],
-  cues:[],trad:["Horn about five seconds before the cannon fires.","A replica 1857 cannon fires after every goal, with an AC/DC \"For Those About to Rock\" snippet.","\"The Whip\" by Locksley follows.","The cannon traveled to the 2026 Stadium Series."]},
+  cues:[],trad:["One horn blast of about five to six seconds, then the cannon fires.","A replica 1857 cannon fires before every home game and after every Blue Jackets goal, with an AC/DC \"For Those About to Rock\" snippet.","\"The Whip\" by Locksley follows.","The cannon traveled to the 2025 Stadium Series at Ohio Stadium."]},
  {id:"NJD",n:"New Jersey Devils",d:"Metropolitan",a:"Prudential Center",c:["#CE1126","#000000"],song:["Howl","The Gaslight Anthem"],horn:{f:123,ch:[1,1.19,1.5],b:[[3.6,0]],tone:0.6,scoop:1},fx:["siren"],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/new-jersey-devils-goal-songs.html"],
-  cues:[],trad:["Horn and song play separately, with a siren over the horn.","\"Howl\" by New Jersey's own Gaslight Anthem.","\"Let's go Devils!\" chant."]},
+  cues:[],trad:["Horn and song play separately, with a siren over the horn.","\"Howl\" by New Jersey's own Gaslight Anthem.","\"Let's go Devils!\" chant.","Organist Pete Cannarozzi plays live."]},
  {id:"NYI",n:"New York Islanders",d:"Metropolitan",a:"UBS Arena",c:["#00539B","#F47D30"],song:["Crowd Chant","Joe Satriani"],horn:{f:147,ch:[1,1.19,1.33,1.5,2],b:[[3.6,0]],tone:0.75,scoop:0.7},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/new-york-islanders-goal-songs.html"],
-  cues:[],trad:["Mix of train and firetruck sounds.","Fans sing the \"whoa-oh\" of \"Crowd Chant\"."]},
+  cues:[],trad:["The old Coliseum horn, a three-bell Kahlenberg chord: three equal blasts about two seconds apart.","Fans chant \"YES! YES! YES!\" after goals."]},
  {id:"NYR",n:"New York Rangers",d:"Metropolitan",a:"Madison Square Garden",c:["#0038A8","#CE1126"],song:["Slapshot","Ray Castoldi (perf. Bad Apple)"],horn:{f:175,ch:[1,1.26,1.5],b:[[3.2,0]],tone:0.8,scoop:0.6},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/new-york-rangers-goal-songs.html"],
-  cues:[],trad:["Old car / firetruck-style horn.","The horn is based on an FDNY firetruck honk.","\"Slapshot\" was written by MSG organist Ray Castoldi.","The \"Hey!\" chant and white towels."]},
+  cues:[],trad:["A recording of a Grover two-horn pair: three equal blasts.","The horn is often described as an FDNY fire-truck honk.","\"Slapshot\" was written by MSG organist Ray Castoldi.","Fans shout \"Hey!\" during \"Slapshot\"."]},
  {id:"PHI",n:"Philadelphia Flyers",d:"Metropolitan",a:"Xfinity Mobile Arena",c:["#F74902","#000000"],song:["Ain't Talkin' 'Bout Love","Van Halen"],horn:{f:117,ch:[1,1.19],b:[[0.9,0.25],[0.9,0.25],[2.6,0]],tone:0.6,scoop:0.8},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/philadelphia-flyers-goal-songs.html"],
-  cues:[],trad:["Gritty celebrates goals."]},
- {id:"PIT",n:"Pittsburgh Penguins",d:"Metropolitan",a:"PPG Paints Arena",c:["#FCB514","#000000"],song:["Party Hard","Andrew W.K."],horn:{f:147,ch:[1,1.19,1.33,1.59,2],b:[[2,0.35],[2.4,0]],tone:0.65,scoop:0.6},fx:[],pre:[],
+  cues:[["Man I Need","Olivia Dean","Win song (2026 playoffs)"]],trad:["Two short blasts, then a long one.","Gritty leads \"Let's go Flyers!\" chants and hypes the crowd, from hat tricks to playoff wins."]},
+ {id:"PIT",n:"Pittsburgh Penguins",d:"Metropolitan",a:"PPG Paints Arena",c:["#FCB514","#000000"],song:["Party Hard","Andrew W.K."],horn:{f:147,ch:[1,1.19,1.33,1.59,2],b:[[3.4,0.5],[5.6,0]],tone:0.65,scoop:0.6},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/pittsburgh-penguins-goal-songs.html"],
-  cues:[],trad:["Train horn, two blasts, with long resonance.","\"Party Hard\" returned as the goal song in 2020-21.","\"Let's go Pens!\" chant."]},
+  cues:[],trad:["Airchime train horn: two equal long blasts.","\"Party Hard\" returned as the goal song in 2020-21.","\"Let's go Pens!\" chant."]},
  {id:"WSH",n:"Washington Capitals",d:"Metropolitan",a:"Capital One Arena",c:["#C8102E","#041E42"],song:["Player goal songs","Each scorer has their own"],horn:{f:98,ch:[1,1.26,1.5],b:[[3.6,0]],tone:0.45,scoop:1.3},fx:["police"],pre:[],
-  conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/washington-capitals-goal-songs.html"],
-  cues:[["Shake, Rattle and Roll","Big Joe Turner","Ovechkin's goal song"],["The Middle","Jimmy Eat World","Strome's goal song"],["BOOM","Tiësto & Sevenn","Wilson's goal song"],["The Hustle","Van McCoy","Milano's goal song"],["Thunder","Imagine Dragons","Protas's goal song"],["Let It Rock","Kevin Rudolf","McMichael's goal song"],["You Can Call Me Al","Paul Simon","Dowd's goal song"],["Can't Hold Us","Macklemore & Ryan Lewis","Lapierre's goal song"],["I Love It","Icona Pop","van Riemsdyk's goal song"],["It's Tricky","Run-DMC","Chisholm's goal song"],["Boyz-n-the Hood","Eazy-E","Frank's goal song"]],trad:["Train-like horn plus a police siren.","Each scorer has their own song; \"Kickstart My Heart\" covers call-ups.","Fans shout \"RED!\" during the anthem."]},
+  conf:["Player songs from news reports","r","https://russianmachineneverbreaks.com/2026/03/19/aliaksei-protas-goal-song-country-roads-tj-oshie-permission/"],
+  cues:[["Shake, Rattle and Roll","Big Joe Turner","Ovechkin's goal song"],["The Middle","Jimmy Eat World","Strome's goal song"],["BOOM","Tiësto & Sevenn","Wilson's goal song (2025-26)"],["Boyz-n-the Hood","Eazy-E","Ethen Frank's goal song (fan site only)"],["Take Me Home, Country Roads","John Denver","Aliaksei Protas's goal song (since March 2026; heard Oct 28, 2026)"],["Man I Need","Olivia Dean","Goalie Logan Thompson's signature song (2025-26)"],["Great Balls of Fire","Jerry Lee Lewis","Cole Hutson's goal song (2025-26)"],["Free Bird","Lynyrd Skynyrd","Ryan Leonard's goal song (heard Oct 7, 2026)"],["You Say","Lauren Daigle","Jakob Chychrun's goal song (2025-26)"]],trad:["Bronze Kahlenberg horn, one medium blast then one long, with a siren: \"yelp\" over the horn and \"wail\" over the song.","Each scorer has their own song; \"Kickstart My Heart\" is the default. Songs for 2026-27 newcomers Kyrou, Tuch, Jenner and Desharnais haven't been reported.","Fans shout \"RED!\" during the anthem.","\"Let's go Caps!\" chants; the \"Unleash the Fury\" video plays late in close games."]},
  // CENTRAL
  {id:"CHI",n:"Chicago Blackhawks",d:"Central",a:"United Center",c:["#CF0A2C","#000000"],song:["Chelsea Dagger","The Fratellis"],horn:{f:98,ch:[1,1.26,1.5],b:[[2.2,0.35],[2.2,0.35],[3,0]],tone:0.45,scoop:1.3},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/chicago-blackhawks-goal-songs.html"],
-  cues:[],trad:["Goal song since 2008.","Ship horn, three long blasts.","\"Chelsea Dagger\" singalong.","Fans cheer through the national anthem."]},
+  cues:[],trad:["Goal song since 2008.","Four-bell chrome Kahlenberg horn, three equal long blasts.","\"Chelsea Dagger\" singalong.","Fans cheer through the national anthem."]},
  {id:"COL",n:"Colorado Avalanche",d:"Central",a:"Ball Arena",c:["#6F263D","#236192"],song:["Chase the Sun","Planet Funk"],horn:{f:86,ch:[1,1.5,2],b:[[4,0]],tone:0.35,scoop:1.2},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/colorado-avalanche-goal-songs.html"],
-  cues:[["All the Small Things","Blink-182","Third-period singalong"]],trad:["Goal song since 2017 (replaced \"Delirious\" by Steve Aoki).","Foghorn-style horn.","Crowd yells \"HEY!\" on the beat of \"Chase the Sun\".","\"Woot woot\" exchange between the PA announcer and fans.","\"All the Small Things\" singalong in the third period."]},
+  cues:[["All the Small Things","Blink-182","Third-period singalong 2019-22; now special occasions only"]],trad:["Goal song since 2017 (replaced \"Delirious\" by Steve Aoki).","Deep single-note Kahlenberg piston horn; the number of blasts varies.","Fans answer the PA announcer's goal call with \"whoop whoop\" (also written \"woot woot\").","\"All the Small Things\" was a third-period singalong from 2019 to 2022; now it plays only on special occasions.","Fans wave white pom-poms at playoff games."]},
  {id:"DAL",n:"Dallas Stars",d:"Central",a:"American Airlines Center",c:["#006847","#8F8F8C"],song:["Puck Off","Pantera"],horn:{f:110,ch:[1,1.19,1.5],b:[[4,0]],tone:0.5,scoop:1},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/dallas-stars-goal-songs.html"],
-  cues:[],trad:["One blast.","Pantera wrote \"Puck Off\" for the team.","Fans shout \"STARS!\" in the anthem."]},
- {id:"MIN",n:"Minnesota Wild",d:"Central",a:"Grand Casino Arena",c:["#154734","#A6192E"],song:["Shout","The Isley Brothers"],horn:{f:104,ch:[1,1.26,1.5],b:[[4.4,0]],tone:0.48,scoop:1.2},fx:[],pre:["lighthouse"],
+  cues:[["Friends in Low Places","Garth Brooks","Third-period singalong"]],trad:["The horn blasts once for each Stars goal so far in the game.","Pantera wrote \"Puck Off\" for the team.","Fans shout \"STARS!\" in the anthem."]},
+ {id:"MIN",n:"Minnesota Wild",d:"Central",a:"Grand Casino Arena",c:["#154734","#A6192E"],song:["Shout","The Isley Brothers"],horn:{f:104,ch:[1,1.26,1.5],b:[[4.4,0]],tone:0.48,scoop:1.2},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/minnesota-wild-goal-songs.html"],
-  cues:[],trad:["Goal song since 2022 (after \"Jump Around\").","One long blare.","Lighthouse foghorn and fog before puck drop.","Crowd jumps to \"Shout\"."]},
+  cues:[],trad:["Goal song since 2022 (after \"Jump Around\").","Three blasts, the middle one short.","Fog pours from the lighthouse before puck drop, and the lighthouse lights up when the Wild score.","Fans rock out to \"Shout\".","A guest leads the \"Let's Play Hockey!\" chant before puck drop."]},
  {id:"NSH",n:"Nashville Predators",d:"Central",a:"Bridgestone Arena",c:["#FFB81C","#041E42"],song:["I Like It, I Love It","Tim McGraw (Preds lyrics)"],horn:{f:170,ch:[1,1.26,1.5,1.008],b:[[4,0]],tone:0.8,scoop:0.8},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/nashville-predators-goal-songs.html"],
-  cues:[["Gold on the Ceiling","The Black Keys","Plays after \"I Like It, I Love It\""]],trad:["Loud firetruck-style horn.","Fans taunt the opposing goalie after the song.","Catfish thrown on the ice; cryo-cannons added in 2025-26."]},
+  cues:[["Gold on the Ceiling","The Black Keys","Plays after \"I Like It, I Love It\""]],trad:["Two five-bell Kahlenberg horns sound a C♯7 chord in one six-second blast.","Fans taunt the opposing goalie during breaks in the song and after it.","Catfish thrown on the ice; cryo-cannons added in 2025-26."]},
  {id:"STL",n:"St. Louis Blues",d:"Central",a:"Enterprise Center",c:["#002F87","#FCB514"],song:["Let's Go Blues","The Urge"],horn:{f:117,ch:[1,1.19,1.005],b:[[1,0.2],[1,0.2],[1.2,0]],tone:0.6,scoop:0.8},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/st-louis-blues-goal-songs.html"],
-  organ:['saints','When the Blues Go Marching In','Organ, right after the horn'],cues:[["Country Roads","John Denver","Crowd singalong"],["Gloria","Laura Branigan","Victory song from the 2019 Cup run"]],trad:["Three short blasts, then the organ plays \"When the Blues Go Marching In\" before The Urge.","A PA chime rings once for each home goal.","\"Country Roads\" singalong.","\"Gloria\" became the 2019 Cup-run victory song."]},
- {id:"UTA",n:"Utah Mammoth",d:"Central",a:"Delta Center",c:["#71AFE5","#090909"],song:["Pretty Handsome Awkward","The Used"],horn:{f:87,ch:[1,1.26,1.5],b:[[1.4,0.3],[1.4,0.3],[2.6,0]],tone:0.42,scoop:1.3},fx:[],pre:[],
+  organ:['saints','When the Blues Go Marching In','Organ, right after the horn'],cues:[["Country Roads","John Denver","Crowd singalong"],["Gloria","Laura Branigan","2019 Cup-run victory song, retired since Oct 2019"]],trad:["A quick toot, then long, short, long blasts (Horn Central; others count three), then the organ plays \"When the Blues Go Marching In\" before The Urge.","The PA goal call ends with a chime rung once for each Blues goal so far.","\"Country Roads\" singalong.","\"Gloria\" was the victory song of the 2019 Cup run and was retired after the October 2019 banner night.","Fans shout \"Blues\" at the end of the anthem."]},
+ {id:"UTA",n:"Utah Mammoth",d:"Central",a:"Delta Center",c:["#6CACE3","#000000"],song:["Pretty Handsome Awkward","The Used"],horn:{f:87,ch:[1,1.26,1.5],b:[[1.4,0.3],[1.4,0.3],[2.6,0]],tone:0.42,scoop:1.3},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/utah-mammoth-goal-songs.html"],
-  cues:[],trad:["Powerful three-blast horn.","New four-horn horn in the rafters (KSL, Oct 2025).","\"Veggie\" chant for Vejmelka, with vegetables thrown.","Tusky rides the \"Zammoth\" after wins."]},
+  cues:[],trad:["Three equal blasts.","A real Kahlenberg four-horn set (C♯, F, G♯, B) above the video board since October 2025.","Fans ride the \"Zammoth\" ice resurfacer before games and at intermissions.","Tusky rides the Zammoth out waving a Mammoth flag after home wins.","Fans chant \"Veggie\" for goalie Karel Vejmelka and sometimes throw vegetables for him."]},
  {id:"WPG",n:"Winnipeg Jets",d:"Central",a:"Canada Life Centre",c:["#041E42","#AC162C"],song:["Gonna Celebrate → scorer's song","The Phantoms"],horn:{f:330,ch:[1],b:[[4.2,0]],tone:0.75,scoop:0.4},fx:["jet"],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/winnipeg-jets-goal-songs.html"],
-  cues:[],trad:["One long train-style blast.","Light, airy horn: the same type as Canadian Pacific Railway trains.","Horn, then \"Gonna Celebrate\", then a jet-engine whoosh, then the scorer's own song.","Playoff Whiteout."]},
+  cues:[],trad:["One 10 to 12 second blast of a Nathan P5 train horn, an A7 chord.","The original Jets' horn from Winnipeg Arena; an arena director described it as a train horn from the old CP or CN yard.","Horn, then \"Gonna Celebrate\", then a jet-engine whoosh, then the scorer's own song.","Playoff Whiteout.","Fans shout \"True North!\" during \"O Canada\"."]},
  // PACIFIC
  {id:"ANA",n:"Anaheim Ducks",d:"Pacific",a:"Honda Center",c:["#F47A38","#000000"],song:["Coming For You","The Offspring"],horn:{f:65,ch:[1,1.5,2],b:[[4.4,0]],tone:0.28,scoop:1.2},fx:[],pre:[],
   conf:["Verified 2026-27 (NHL.com)","v","https://www.nhl.com/ducks/news/ducks-unveil-hometown-remix-jersey-for-2026-27-season"],
-  cues:[["Coming For You (Hometown Remix)","The Offspring","New remix; in-arena debut Nov 8, 2026"],["Bro Hymn","Pennywise","Previous goal song"]],trad:["One of the deepest foghorns in the league.","The Offspring remixed \"Coming For You\" for the Hometown Remix jersey; it debuts at Honda Center on Nov 8, 2026.","\"Coming For You\" by Orange County's own Offspring replaced \"Bro Hymn\"."]},
- {id:"CGY",n:"Calgary Flames",d:"Pacific",a:"Scotiabank Saddledome",c:["#C8102E","#F1BE48"],song:["T.N.T.","AC/DC"],horn:{f:156,ch:[1,1.19,1.5,1.78],b:[[4,0]],tone:0.8,scoop:0.6},fx:[],pre:[],
+  cues:[["Coming For You (Hometown Remix)","The Offspring","Hometown Remix nights; in-arena debut Nov 8, 2026 vs Pittsburgh"],["Bro Hymn","Pennywise","Goal song 2005-2024"]],trad:["One of the deepest horns in the league, a single-note piston horn: three long blasts with long pauses.","The Offspring remixed \"Coming For You\" for the Hometown Remix jersey; it debuts at Honda Center on Nov 8, 2026.","\"Coming For You\" by Orange County's own Offspring replaced \"Bro Hymn\" (2005-2024) at the 2024-25 opener."]},
+ {id:"CGY",n:"Calgary Flames",d:"Pacific",a:"Scotiabank Saddledome",c:["#D2001C","#FAAF19"],song:["T.N.T.","AC/DC"],horn:{f:156,ch:[1,1.19,1.5,1.78],b:[[4,0]],tone:0.8,scoop:0.6},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/calgary-flames-goal-songs.html"],
-  cues:[],trad:["Goal song since 2015.","Firetruck-style horn.","2026-27 is the final Saddledome season; Scotia Place opens in 2027-28.","Iconic Saddledome horn (Toronto's new horn copies it).","\"C of Red\" and the Red Mile."]},
+  cues:[],trad:["Goal song since 2015.","Four-chime Buell horns: two long blasts with up to three short ones between.","2026-27 is the final Saddledome season; Scotia Place is set to open for 2027-28.","Iconic Saddledome horn; fans say Toronto's 2026-27 horn sounds like it.","\"C of Red\" and the Red Mile."]},
  {id:"EDM",n:"Edmonton Oilers",d:"Pacific",a:"Rogers Place",c:["#FF4C00","#041E42"],song:["Striking Oil","Royal Tusk"],horn:{f:185,ch:[1,1.26,1.5],b:[[3.4,0]],tone:0.85,scoop:0.8},fx:[],pre:[],
   conf:["Verified 2026-27 (NHL.com)","v","https://www.nhl.com/oilers/video/the-story-behind-the-new-oilers-goal-song-6406052808112"],
-  cues:[["Fluxland","XL","Retired goal song"]],trad:["Firetruck / traffic-jam style horn, high-pitched.","\"Striking Oil\" was written for the team by Edmonton band Royal Tusk and debuted at the 2026 home opener."]},
- {id:"LAK",n:"Los Angeles Kings",d:"Pacific",a:"Crypto.com Arena",c:["#111111","#A2AAAD"],song:["Power Ride 22","Fred Coury"],horn:{f:311,ch:[1,1.19,1.587],b:[[2.4,0]],tone:0.75,scoop:0.3},fx:[],pre:[],
+  cues:[["La Bamba","Ritchie Valens song","In-arena win song (2025-26); version not stated"],["Fluxland","XL","Retired goal song"]],trad:["Four Hadley truck horns, high and bright: one medium blast, then a long one.","\"Striking Oil\" was written for the team by Edmonton band Royal Tusk and debuted at the 2026 home opener."]},
+ {id:"LAK",n:"Los Angeles Kings",d:"Pacific",a:"Crypto.com Arena",c:["#111111","#A2AAAD"],song:["Power Ride (2022 Version)","Fred Coury"],horn:{f:311,ch:[1,1.19,1.587],b:[[2.4,0]],tone:0.75,scoop:0.3},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/los-angeles-kings-goal-songs.html"],
-  cues:[["Toxicity","System of a Down","\"First Look\" intro series, 2026-27"],["Fear of the Dark","Iron Maiden","In-game song"]],trad:["Train-style horn that rings out briefly on its own.","\"Power Ride 22\" was written for the Kings by Fred Coury (2024).","2026-27 Saturday home games open with a new music video.","Iron Maiden's \"Fear of the Dark\" plays in-game."]},
+  cues:[["Toxicity","System of a Down","Opened the \"First Look\" intro series at the Oct 6, 2026 home opener"],["Fear of the Dark","Iron Maiden","In-game song (2025-26)"]],trad:["Nathan train horns sound three equal blasts (Horn Central; one 2024 ranking describes one long blast).","\"Power Ride (2022 Version)\" is Fred Coury's updated Kings goal song.","2026-27 Saturday home games open with a new music video.","Iron Maiden's \"Fear of the Dark\" played in-game in 2025-26."]},
  {id:"SJS",n:"San Jose Sharks",d:"Pacific",a:"SAP Center",c:["#006D75","#000000"],song:["Holiday","Green Day"],horn:{f:78,ch:[1,1.5,2],b:[[2.6,0.45],[2.8,0]],tone:0.3,scoop:1.2},fx:[],pre:[],
-  conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/san-jose-sharks-goal-songs.html"],
-  cues:[["Power Bite","Bvrnout","2025-26 goal song, retired"]],trad:["Deep foghorn, a couple of long blasts.","\"Holiday\" returned on Oct 1, 2026 (also the 2006-07 goal song).","\"Power Bite\" was retired after one season.","Players skate out through the shark head."]},
+  conf:["Verified 2026-27 (The Hockey News)","v","https://thehockeynews.com/nhl/san-jose-sharks/latest-news/a-holiday-in-san-jose-mason-marchment-debuts-sharks-new-goal-song"],
+  cues:[["Power Bite","Bvrnout","2025-26 goal song, retired"]],trad:["Deep Kahlenberg horn, said to come from an aircraft carrier: two equal blasts with a long pause.","\"Holiday\" debuted on Oct 1, 2026 vs Florida (it was also the 2006-07 goal song).","\"Power Bite\" was retired after one season.","Players skate out through a giant shark head, a tradition since 1993."]},
  {id:"SEA",n:"Seattle Kraken",d:"Pacific",a:"Climate Pledge Arena",c:["#001628","#99D9D9"],song:["Lithium (\"Let's Go Kraken\")","Nirvana"],horn:{f:74,ch:[1,1.5],b:[[4.4,0]],tone:0.35,scoop:1},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/seattle-kraken-goal-songs.html"],
-  cues:[],trad:["Ferry-style horn: the real horn from the retired ferry MV Hyak.","\"Lithium\" reworked as \"Let's Go Kraken\"."]},
+  cues:[],trad:["Ferry horn: the real horn from the retired ferry MV Hyak, one six-second blast.","\"Lithium\" reworked as \"Let's Go Kraken\".","Organist Benny Drawbars plays live.","\"The Surge\": a guest cranks a ship's engine-order telegraph to start the game."]},
  {id:"VAN",n:"Vancouver Canucks",d:"Pacific",a:"Rogers Arena",c:["#00205B","#00843D"],song:["Don't You (Forget About Me)","Simple Minds"],horn:{f:110,ch:[1,1.19,1.5,2.24],b:[[4.6,0]],tone:0.55,scoop:1},fx:[],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/vancouver-canucks-goal-songs.html"],
-  cues:[],trad:["One long train/ship-style burst.","Goal song since December 2021.","Fans sing \"hey hey hey hey\" with it."]},
+  cues:[],trad:["One 8 to 10 second blast from three horns, two Kahlenbergs and an Airchime.","Goal song since December 2021.","The song opens with its \"hey hey hey hey\" hook."]},
  {id:"VGK",n:"Vegas Golden Knights",d:"Pacific",a:"T-Mobile Arena",c:["#B4975A","#333F42"],song:["Vegas Lights","Panic! at the Disco"],horn:{f:86,ch:[1,1.5,2],b:[[4,0]],tone:0.35,scoop:1.2},fx:["slots"],pre:[],
   conf:["Current per Hockey Goal Songs","v","https://hockeygoalsongs.com/vegas-golden-knights-goal-songs.html"],
-  cues:[],trad:["Deep foghorn, with \"Go Team Go\" over the song.","Cash-register and slot-machine sounds play during the scorer call.","Pregame knight show on the ice."]},
+  cues:[["Viva Las Vegas","Elvis Presley","Win song"]],trad:["Deep foghorn, with a \"Go Knights Go\" chant over the song.","Slot-machine sounds play under the goal call (reported in 2017 and 2024).","Theatrical pregame show on the ice, revamped for 2026-27."]},
 ];
 /* Reference recordings: "2026 - 2027 NHL Goal Horns" playlist by Elite Goal Horns (YouTube), supplied by the board's owner. Links only; needs a connection. */
-const HW={"ANA": ["Real", "Airchime EP-90 piston horn (Kahlenberg)", "1993", "Catwalk above section 418", "anaheim-ducks"], "BOS": ["Recording", "Kahlenberg KM-135", "2007", "Played as a recording", "boston-bruins"], "BUF": ["Real", "Kahlenberg Q-3 fig. 483-3", "late 1980s", "An old boat horn on an air compressor; the same horn the Sabres used at the Aud", "buffalo-sabres"], "CGY": ["Real", "Buell 4-chime horn set", "c. 1998–2001", "Catwalk above the scoreboard", "calgary-flames"], "CAR": ["Real", "Kahlenberg Q-4 fig. 414c", "1992–93", "The same horn the Hartford Whalers used", "carolina-hurricanes"], "CHI": ["Real", "Kahlenberg Q-3 fig. 483-3", "1973", "Mounted to the rafters near center ice", "chicago-blackhawks"], "COL": ["Real", "Kahlenberg KPH-130", "2003", "Catwalk above the scoreboard", "colorado-avalanche"], "CBJ": ["Real", "Kahlenberg 203-C", "2000", "Rafters above the scoreboard", "columbus-blue-jackets"], "DAL": ["Real", "Kahlenberg KDT-123", "1998", "Rafters above the scoreboard", "dallas-stars"], "DET": ["Real", "Kahlenberg Q-3 fig. 483", "2023", "New horn for 2023-24, replacing a recording of the Joe Louis Arena Buell horn", "detroit-red-wings"], "EDM": ["Real", "Hadley Bully horn set", "1999", "Rafters above the scoreboard", "edmonton-oilers"], "FLA": ["Real", "Kahlenberg Q-3 fig. 483", "1997", "One horn was damaged on delivery; the team kept it, which gives the horn its unique sound", "florida-panthers"], "LAK": ["Real", "Nathan K3LA (train horn)", "2007", "Rafters above the ice", "los-angeles-kings"], "MIN": ["Real", "Kahlenberg Q-3A", "2000", "Above the lighthouse in one corner", "minnesota-wild"], "MTL": ["Real", "Airchime K3L (train horn)", "1999", "Rafters above the scoreboard", "montreal-canadiens"], "NSH": ["Real", "Kahlenberg F-3 fig. 513 (×2)", "1998", "Two horns over center ice; the newer one (2021) faces south", "nashville-predators"], "NJD": ["Real", "Kahlenberg D-4a", "2008", "Rafters above the scoreboard", "new-jersey-devils"], "NYI": ["Real", "Kahlenberg T-3a fig. 313", "2000", "Rafters above the scoreboard", "new-york-islanders"], "NYR": ["Recording", "Old FDNY fire truck horn", "1995", "A recording of an old FDNY horn", "new-york-rangers"], "OTT": ["Real", "Airchime M3H (train horn)", "1995", "Rafters above the scoreboard", "ottawa-senators"], "PHI": ["Real", "Kahlenberg S-203C", "unknown", "Catwalk above the scoreboard", "philadelphia-flyers"], "PIT": ["Real", "Kahlenberg KMJ-234", "2005", "Rafters over one of the goals", "pittsburgh-penguins"], "SJS": ["Real", "Kahlenberg Triton S-120", "1993", "Catwalk near one end", "san-jose-sharks"], "SEA": ["Real", "Cunningham B-6", "2021", "From the decommissioned WSDOT ferry Hyak", "seattle-kraken"], "STL": ["Real", "Kahlenberg S-203C (×2)", "1993", "Two horns in the rafters near the scoreboard hoists", "st.-louis-blues"], "TBL": ["Real", "Kahlenberg S-203CV", "c. 2000–03", "Rafters above section 109", "tampa-bay-lightning"], "TOR": ["Real", "Buell 4-chime horn set", "2005", "Same make of horn set as Calgary’s", "toronto-maple-leafs"], "UTA": ["Real", "Kahlenberg Q3 Low Tone", "2025", "Rafters above the scoreboard", "utah-hockey-club"], "VAN": ["Real", "Kahlenberg KM-250 + S-302C + Airchime 3", "2009", "Three horns in the rafters above the scoreboard", "vancouver-canucks"], "VGK": ["Real", "Kahlenberg KPH-130", "2017", "Rafters above one blue line; a second horn on the roof for outdoor celebrations", "vegas-golden-knights"], "WSH": ["Real", "Kahlenberg Q3-483", "2000", "Rafters above the ice", "washington-capitals"], "WPG": ["Real", "Leslie Supertyfon RS5T (high-tuned)", "1992", "The same horn the original Winnipeg Jets used", "winnipeg-jets"]};
+const HW={"ANA":["Real","Airchime EP90 piston horn","1996-97","Corner above section 420. Older posts give 1993 and section 418","anaheim-ducks"],"BOS":["Recording","Kahlenberg KM-135","2008-09","Played over the sound system","boston-bruins"],"BUF":["Real","Kahlenberg Q-3 (Horn Central: Q3-A chrome Chimetone; TheFaceoff: Q-3 fig. 483-3)","1988-89","Above the video board, facing the benches; the horn came over from the Aud","buffalo-sabres"],"DET":["Real","Kahlenberg Q3-483, modified","2023-24","In the rafters above the scoreboard. The team calls it the same model as the Joe Louis Arena horn","detroit-red-wings"],"FLA":["Real","Kahlenberg Q3-483 brass (2 sets)","1996-97","In the rafters near the scoreboard; Horn Central lists a second set added for 2026-27. One bell was damaged on delivery and kept; TheFaceoff says that gives it a unique sound, Horn Central says it doesn't change the sound","florida-panthers"],"MTL":["Real","Airchime K3L train horn","1998-99","In the rafters facing centre ice. One of its three bells didn't sound until February 2023","montreal-canadiens"],"OTT":["Real","Airchime M3H train horn","1992","Above the scoreboard. Salvaged from a VIA Rail locomotive (CBC); one bell is dead, so it plays two notes","ottawa-senators"],"TBL":["Real","Kahlenberg S-203","2002-03","Above the goal the Lightning shoot at twice, facing the scoreboard. Horn Central says it came from a scrapped cruise ship","tampa-bay-lightning"],"TOR":["Real","Kahlenberg S-203","2005-06","Above the suites in one end. For 2026-27 goals a different horn sounds, which Horn Central lists as a Buell 42944 (Calgary's model) and believes is temporary; the S-203 still sounds for wins (a fan clip says player introductions too). The team hasn't announced it","toronto-maple-leafs"],"CAR":["Real","Kahlenberg Q4","1992-93","Facing the roof above the blue line. The Hartford Whalers' ship's horn, built in 1944, the oldest NHL horn by build date","carolina-hurricanes"],"CBJ":["Real","Kahlenberg S-203","2000-01","In the rafters above the neutral zone","columbus-blue-jackets"],"NJD":["Real","Kahlenberg D-4","2007-08","Above the scoreboard, facing the ice","new-jersey-devils"],"NYI":["Real","Kahlenberg T-3A (2 sets)","2000-01","Above the nets, facing the ice","new-york-islanders"],"NYR":["Recording","Grover 1700 + 1748 horn pair","1993-94","Played over the sound system. Often described as an FDNY fire-truck horn","new-york-rangers"],"PHI":["Real","Kahlenberg S-203 (2 sets)","2005-06","Above the scoreboard, facing the end zones","philadelphia-flyers"],"PIT":["Real","Airchime KMJ-234 train horn","2005-06","In one end above section 227; it came over from Mellon Arena","pittsburgh-penguins"],"WSH":["Real","Kahlenberg Q3-483 bronze","1998-99","On the catwalk next to the scoreboard. A Heathkit siren plays its \"yelp\" tone over the horn and \"wail\" over the song","washington-capitals"],"CHI":["Real","Kahlenberg Q3-483 chrome","1972-73","In the rafters above the video board (mounted under it until 2021)","chicago-blackhawks"],"COL":["Real","Kahlenberg KPH-130 piston horn","2003-04","In the rafters, facing center ice","colorado-avalanche"],"DAL":["Real","Kahlenberg KDT-123 (2 sets)","1996-97","Above center ice, pointing toward each end zone","dallas-stars"],"MIN":["Real","Kahlenberg Q3-A brass Chimetone","2000-01","Above the lighthouse","minnesota-wild"],"NSH":["Real","Kahlenberg F-3 (2 sets)","1998-99; second set 2021-22","Above the scoreboard, one facing each end zone","nashville-predators"],"STL":["Real","Kahlenberg S-203 (2 sets)","1992-93","Above the scoreboard, facing the corners","st-louis-blues"],"UTA":["Real","Kahlenberg Q3, four-note set (Horn Central lists 2 sets)","2025-26","On a platform above the video board, facing each end. Kahlenberg built it for the team","utah-mammoth"],"WPG":["Real","Nathan P5 train horn","1992-93","On a platform above the scoreboard. The original Jets' horn from Winnipeg Arena; a Leslie RS5T in the building isn't hooked up","winnipeg-jets"],"CGY":["Real","Buell 42944 four-chime set (4 sets)","2001-02","Above the video board","calgary-flames"],"EDM":["Real","Hadley H00640R (×2) and Hadley Bully (×2)","1999-00","On top of the scoreboard, behind the Rogers Place sign; brought over from Rexall Place","edmonton-oilers"],"LAK":["Real","Nathan Airchime K3L (2 sets)","2007-08","Above each blue line, facing the end zones","los-angeles-kings"],"SJS":["Real","Kahlenberg S-120","1993-94","In one end, behind the banners. Horn Central says it came from an aircraft carrier","san-jose-sharks"],"SEA":["Real","Cunningham 6-B","2021-22","On the catwalk above a blue line. From the retired ferry MV Hyak","seattle-kraken"],"VAN":["Real","Kahlenberg KM-135 + KM-200 + Airchime KA123","1994 (Airchime); 2008 (Kahlenbergs)","Three horns in the rafters above the scoreboard","vancouver-canucks"],"VGK":["Real","Kahlenberg KPH-130 piston horn","2017-18","In the rafters above a blue line; a second horn outside is used for watch parties","vegas-golden-knights"]};
+/* Horn sound data, checked November 6, 2026. Bell pitches (Hz) and blast patterns come from Horn Central's NHL horn
+   catalog, cross-checked with Kahlenberg and Nathan specs, CBC, KSL/FOX 13 and other reports where they exist. Where a
+   source gives only the pattern (long, short, equal), blast lengths in seconds are estimates. */
+const KIND={
+  kahl:{att:.3,rel:.34,air:.42,tone:.45,scoop:1.2},     // Kahlenberg multi-bell chime horns
+  big:{att:.38,rel:.4,air:.5,tone:.38,scoop:1.5},       // big single-note marine horns (S-203, S-120, KM)
+  piston:{att:.2,rel:.32,air:.55,tone:.3,scoop:1.1},    // piston horns: deep, brassy, one note
+  train:{att:.07,rel:.2,air:.32,tone:.8,scoop:.35},     // locomotive horns (Nathan, Airchime)
+  buell:{att:.09,rel:.22,air:.32,tone:.72,scoop:.45},   // Buell chime horns
+  truck:{att:.05,rel:.16,air:.28,tone:.88,scoop:.3},    // truck and fire-apparatus horns (Hadley, Grover)
+  ferry:{att:.5,rel:.5,air:.6,tone:.3,scoop:1.7},       // ship whistle-style ferry horn
+};
+const E=(d,g,k)=>Array.from({length:k},(_,i)=>[d,i<k-1?g:0]);
+const HORN={
+  ANA:{k:'piston',n:[90],b:E(3,1.6,3)},
+  BOS:{k:'big',n:[135],b:[[3,.6],[3,0]]},
+  BUF:{k:'kahl',n:[143,180,212,253],b:E(2.5,.35,3)},
+  DET:{k:'kahl',n:[177,212],b:E(1.8,.35,3)},
+  FLA:{k:'kahl',n:[177,212],b:E(1.8,.35,3)},
+  MTL:{k:'train',n:[311,380,470],b:[[10,0]]},
+  OTT:{k:'train',n:[305,351],b:[[2,.3],[2,.3],[.5,.2],[.5,.2],[2.6,0]]},
+  TBL:{k:'big',n:[140],b:[[3,.35],[1.6,0]]},
+  TOR:{k:'buell',n:[210,266,299,357],b:[[2.4,.25],[.3,.12],[.3,.12],[.3,.12],[2.8,0]]},
+  CAR:{k:'kahl',n:[110,140,175,220],b:[[3,.35],[2.4,.35],[2.4,0]]},
+  CBJ:{k:'big',n:[140],b:[[5.5,0]]},
+  NJD:{k:'kahl',n:[170,220],b:E(1.6,.3,3)},
+  NYI:{k:'kahl',n:[208,266,323],b:E(1.4,.6,3)},
+  NYR:{k:'truck',n:[193,236],b:E(1.2,.3,3)},
+  PHI:{k:'big',n:[135],b:[[.9,.25],[.9,.25],[2.8,0]]},
+  PIT:{k:'train',n:[205,255,308],b:E(4,.6,2)},
+  WSH:{k:'kahl',n:[150,178,210],b:[[1.6,.35],[3,0]]},
+  CHI:{k:'kahl',n:[140,180,208,253],b:E(2.4,.4,3)},
+  COL:{k:'piston',n:[130],b:[[4,0]]},
+  DAL:{k:'kahl',n:[143,182,212,290,370,422],b:[[1.3,.45]],perGoal:1},
+  MIN:{k:'kahl',n:[180,212],b:[[1.3,.3],[.5,.3],[2.6,0]]},
+  NSH:{k:'kahl',n:[142,179,212,253,285],b:[[6,0]]},
+  STL:{k:'big',n:[140],b:[[.3,.2],[1.5,.3],[.5,.3],[1.5,0]],chime:1},
+  UTA:{k:'kahl',n:[140,176,207,248.5],b:E(2,.35,3)},
+  WPG:{k:'train',n:[277,335,402,444,546],b:[[11,0]]},
+  CGY:{k:'buell',n:[210,266,299,357],b:[[2.4,.3],[.35,.15],[.35,.15],[2.8,0]]},
+  EDM:{k:'truck',n:[326,398,422],b:[[1.5,.35],[3,0]]},
+  LAK:{k:'train',n:[311,372,480],b:E(1.4,.3,3)},
+  SJS:{k:'big',n:[92],b:E(2.6,1.8,2)},
+  SEA:{k:'ferry',n:[110],b:[[6,0]]},
+  VAN:{k:'big',n:[138,203,278],b:[[9,0]]},
+  VGK:{k:'piston',n:[130],b:[[4,0]]},
+};
+T.forEach(t=>{const h=HORN[t.id];if(!h)return;t.horn=Object.assign({},KIND[h.k],{n:h.n,f:h.n[0],ch:h.n.map(x=>+(x/h.n[0]).toFixed(3)),b:h.b,kind:h.k,perGoal:h.perGoal,chime:h.chime})});
+const OPEN={"BOS":"Blast count and install year come from Horn Central only (two 3-second blasts, 2008-09); TheFaceoff says 2007.","BUF":"2026-27 goal song: no change announced; EA's NHL 27 list and Hockey Goal Songs still name \"Kickstart My Heart\". Horn model and notes: Horn Central and TheFaceoff disagree.","DET":"Horn make: TheFaceoff and Horn Central say Kahlenberg (fans also said it sounds like Florida's Kahlenberg). The team calls it the same model as the Joe Louis Arena horn, which Detroit Sports Nation and CBC call Buell reed horns. Blast count from Horn Central only.","FLA":"Horn Central's second horn set for 2026-27 (no other source), whether the damaged bell changes the sound (TheFaceoff and Horn Central disagree), and the blast count (Horn Central only).","MTL":"Goal song: the team hasn't published it; The Hockey News (2025), EA's NHL 27 list and Sideline DJ name \"Hey!!\" by Antoine Becks. Blast length and the 2023 bell repair: Horn Central only.","TBL":"Horn notes and blast count: Horn Central only (one 140 Hz note, long then medium); The Hockey Writers calls it two-tone. Cruise-ship origin: Horn Central only.","TOR":"The new horn's make (Horn Central says Buell; the team hasn't said), its notes and pattern (Horn Central's Calgary values), and the goal song (reported, not announced).","WSH":"Horn notes: Horn Central lists three (150, 178, 210 Hz), the maker lists two (174 and 208 Hz). The one-medium, one-long pattern comes from Horn Central only. Ethen Frank's song comes from a fan site only; Ovechkin's and Strome's songs have no 2026-27 report, and none were found for Kyrou, Tuch, Jenner or Desharnais.","COL":"Blast count: Horn Central says it varies and no source gives a typical count, so one long blast is used here.","VGK":"Blast count: Horn Central says it varies, so one long blast is used here. Nothing from 2025-27 confirms the slot-machine sounds are still used.","MIN":"Order of the three blasts: Horn Central hears medium, short, long; The Lead (May 2026) hears long, short, medium. Horn Central lists two notes for a horn other sources call four-bell.","NSH":"The order of songs after a goal in recent seasons.","WPG":"Whether the jet-engine whoosh still plays between the songs (last described in 2022).","STL":"Blast pattern: Horn Central hears a quick toot then long, short, long; other sources hear three. What the 2025-26 \"refreshed goal celebration\" changed hasn't been described.","LAK":"Blast count (Horn Central: three; a 2024 ranking: one long blast), whether \"Fear of the Dark\" is still used in 2026-27, and the top bell (Horn Central K3L vs a K3LA listing).","VAN":"Whether the crowd sings along (fan blogs say yes in the 2024 playoffs; no team or news report).","UTA":"One four-horn set or two: Horn Central lists two sets; local news describes one four-horn goal horn."};
 const REF={"ANA": "IhrqiCNhb5I", "BOS": "VVxPx1IPwBo", "BUF": "8LfQd8RnJ_w", "CGY": "ssd69QgU3oQ", "CAR": "Ziqv407vKUM", "CHI": "ZUE_xQq5iZ0", "COL": "0RP3GWY24SY", "CBJ": "CWzFmn5gr_w", "DAL": "0gi90MK_a3Q", "DET": "FfnqjKXFAec", "EDM": "zH7qbfwv8sY", "FLA": "ugxUO0XveXo", "LAK": "QeZOmkSjqCc", "MIN": "OzdP7wCZtZQ", "MTL": "kMH6oZeejuk", "NSH": "1TWADZMiLko", "NJD": "ujKamV91aso", "NYI": "nit9ioLT4-U", "NYR": "tTY5VDSKVxs", "OTT": "CbMrz-GmOdE", "PHI": "p6CfDP9iFec", "PIT": "PQr0ToqdtsY", "SJS": "ZWzDPKi4vgY", "SEA": "Hn2EQ80p4Yo", "STL": "RFIdeMNgGJA", "TBL": "LASk7cyRv8M", "TOR": "sPEgd9OiIU8", "UTA": "o1uNIOjoo-g", "VAN": "vVQWfBkoVns", "VGK": "8mcDlFb7ZwU", "WSH": "EEdtNobYgVE", "WPG": "3JKROtomYgU"};
 const DIVS=["Atlantic","Metropolitan","Central","Pacific"];
 
 /* ---------------- AUDIO ENGINE ---------------- */
-let ctx,master,comp,verb,verbGain,dry,analyser,active=new Set();
+let fxBus,lim,safe,songBus,ctx,master,comp,verb,verbGain,dry,analyser,slap,active=new Set();
 function initAudio(){
   if(ctx) return;
   ctx=new (window.AudioContext||window.webkitAudioContext)();
   comp=ctx.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=4;
-  master=ctx.createGain();master.gain.value=+document.getElementById('vol').value;
+  master=ctx.createGain();master.gain.value=1; // horn always at full volume; songs ride 40% under it
+  // safety limiter at the very end so a full-volume horn over a song never clips
+  lim=ctx.createDynamicsCompressor();lim.threshold.value=-1;lim.knee.value=0;lim.ratio.value=20;lim.attack.value=.002;lim.release.value=.12;
+  // last-resort soft clip: untouched below 0.9, rounds off anything the limiter lets past instead of hard clipping
+  safe=ctx.createWaveShaper();safe.oversample='4x';safe.curve=(()=>{const n=2049,c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1)*2-1,a=Math.abs(x);c[i]=a<=.9?x:Math.sign(x)*(.9+.1*Math.tanh((a-.9)/.1))}return c})();
   analyser=ctx.createAnalyser();analyser.fftSize=64;
   dry=ctx.createGain();
-  verb=ctx.createConvolver();verb.buffer=arenaIR(3.8);
+  verb=ctx.createConvolver();verb.buffer=arenaIR(5.5);
   verbGain=ctx.createGain();verbGain.gain.value=.45;
+  const preD=ctx.createDelay(.2);preD.delayTime.value=.06;preD.connect(verb);verb.pre=preD;
+  [[.53,.0035],[.91,.0022],[1.37,.0013]].forEach(([f,d])=>{const l=ctx.createOscillator();l.frequency.value=f;const lg=ctx.createGain();lg.gain.value=d;l.connect(lg).connect(preD.delayTime);l.start()});
+  // slapback: the horn comes back off the far end of the bowl about a third of a second later
+  slap=ctx.createDelay(1);slap.delayTime.value=.31;const sfb=ctx.createGain();sfb.gain.value=.24;
+  const slp=ctx.createBiquadFilter();slp.type='lowpass';slp.frequency.value=1900;const sg=ctx.createGain();sg.gain.value=.3;
+  slap.connect(slp).connect(sfb).connect(slap);slp.connect(sg).connect(comp);
   dry.connect(comp);verb.connect(verbGain).connect(comp);
-  comp.connect(master).connect(analyser).connect(ctx.destination);
+  comp.connect(master).connect(lim).connect(safe).connect(analyser).connect(ctx.destination);
+  fxBus=ctx.createGain();fxBus.gain.value=fxVol();fxBus.connect(dry);fxBus.connect(preD);fxBus.connect(slap);
+  songBus=ctx.createGain();songBus.connect(master);
   meterLoop();
 }
-function bus(){const g=ctx.createGain();g.connect(dry);g.connect(verb);return g}
+function hornBus(){const g=ctx.createGain();g.connect(dry);g.connect(verb.pre);g.connect(slap);return g}
+function bus(){const g=ctx.createGain();g.connect(fxBus);return g}
+function fxVol(){try{const v=parseFloat(document.getElementById('vol').value);return isFinite(v)&&v>=0&&v<=1?v:.8}catch(e){return .8}}
 function arenaIR(sec){
-  const r=ctx.sampleRate,len=Math.floor(r*sec),b=ctx.createBuffer(2,len,r),pd=Math.floor(r*.025);
-  for(let c=0;c<2;c++){const d=b.getChannelData(c);let lp=0;
-    for(let k=0;k<14;k++){const at=pd+Math.floor(r*(.008+Math.random()*.18)),amp=(Math.random()<.5?-1:1)*(.5-k*.025);if(at<len)d[at]+=amp}  // glass, boards, bowl
-    for(let i=pd;i<len;i++){const t=(i-pd)/r,env=Math.exp(-t*6.9/(sec*.85));
-      const k=Math.min(.97,.25+t*.32);lp=lp*k+(Math.random()*2-1)*(1-k);  // the tail loses highs as it decays
-      d[i]+=lp*env*(t<.03?t/.03:1)*1.6}}
+  /* A big hockey bowl: scattered early reflections off the glass and seating, then a long diffuse tail.
+     Low frequencies ring on far longer than the highs (air and 18,000 people soak up the treble). */
+  const r=ctx.sampleRate,len=Math.floor(r*sec),b=ctx.createBuffer(2,len,r),ref=r*4.4/3/7.4;
+  for(let c=0;c<2;c++){const d=b.getChannelData(c);let lo=0,e=0;
+    for(let i=0;i<len;i++){const t=i/r,w=Math.random()*2-1;lo+=.035*(w-lo);const hi=w-lo;
+      const er=(t>.012&&t<.32&&Math.random()<.0035)?(Math.random()*2-1)*3*(1-t/.32):0;
+      const v=(lo*3.4*Math.exp(-6.9*t/sec)+hi*.6*Math.exp(-6.9*t/(sec*.38))+er)*(t<.02?t/.02:1);d[i]=v;e+=v*v}
+    const k=Math.sqrt(ref/e);for(let i=0;i<len;i++)d[i]*=k}
   return b;
 }
 function track(node,stopAt){active.add(node);node.onended=()=>active.delete(node);if(stopAt)node.stop(stopAt);return node}
@@ -354,69 +442,70 @@ function noise(){
 }
 const shaper=(()=>{let c;return()=>{if(c)return c;const n=1024;c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/n*2-1;c[i]=Math.tanh(x*2.6)}return c}})();
 
-/* Air horn model.
-   Each trumpet is a diaphragm valve chopping compressed air: a narrow-pulse waveform whose harmonics are shaped by
-   the flared bell (high-pass below the horn's cutoff, broad resonance in the upper mids). Trumpets start a few
-   milliseconds apart as air reaches them, rise in pitch while pressure builds, wander slightly while sounding,
-   carry air hiss, and are heard through a large, wet arena. startHorn() sounds until release(): air valve open while held. */
-const waveCache=new Map();
-function hornWave(f,tone){
-  const key=Math.round(f)+':'+tone;if(waveCache.has(key))return waveCache.get(key);
-  const N=Math.min(120,Math.floor(16000/f)),re=new Float32Array(N+1),im=new Float32Array(N+1);
-  const duty=.18+.12*(1-tone),fc=f*.9,formant=900+tone*1900;
-  for(let n=1;n<=N;n++){const fn=n*f;
-    let a=Math.abs(Math.sin(Math.PI*n*duty))/n;                 // diaphragm: narrow air pulses
-    a*=1/(1+Math.pow(fc/fn,4));                                 // bell high-pass: little energy below the horn's cutoff
-    a*=1+1.8*Math.exp(-Math.pow(Math.log(fn/formant)/0.55,2));  // bell resonance
-    a*=1/(1+Math.pow(fn/(5200+tone*4000),2));                   // air absorption over distance
-    im[n]=a;}
-  const w=ctx.createPeriodicWave(re,im,{disableNormalization:false});waveCache.set(key,w);return w;
-}
-let driftBuf;
-function drift(){ // smooth random wander, values about -1..1, played slowly for pitch drift
-  if(!driftBuf){const r=ctx.sampleRate,len=r*8;driftBuf=ctx.createBuffer(1,len,r);const d=driftBuf.getChannelData(0);let v=0,x=0;
-    for(let i=0;i<len;i++){x+=(Math.random()*2-1)*.002;x*=.9995;v+=(x-v)*.001;d[i]=v*40}}
-  const s=ctx.createBufferSource();s.buffer=driftBuf;s.loop=true;s.loopStart=Math.random()*7;return s;
-}
-let hornBus;
-function hornOut(){ // horns sit far up in the rafters: wetter mix than chants and effects
-  if(!hornBus){hornBus=ctx.createGain();const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=7000;
-    const d=ctx.createGain();d.gain.value=.75;const w=ctx.createGain();w.gain.value=1.25;hornBus.connect(lp);lp.connect(d).connect(dry);lp.connect(w).connect(verb)}
-  return hornBus;
-}
+/* Air horn model. Each bell is a diaphragm horn: a buzzy pulse rich in harmonics (not a pure tone),
+   shaped by the bell's resonance, with a slow swell as air pressure builds, a pitch that scoops up and then
+   drifts and wavers, breathy air noise, and a sag in pitch as the valve closes. Bells are slightly detuned
+   against each other, so a chord beats the way real multi-bell horns do.
+   Horn data: f = lowest note (Hz), ch = the other bells as ratios of f (or n = exact bell pitches in Hz),
+   att = swell time (s), rel = release time (s), air = breath noise amount, tone = brightness, scoop = semitones flat at the start.
+   startHorn() sounds until release() is called, like the operator's button: air valve open while held. */
+const waveCache={};
+function hornWave(bright){const k=Math.round(bright*20);if(waveCache[k])return waveCache[k];
+  const N=64,re=new Float32Array(N+1),im=new Float32Array(N+1),slope=1.25-bright*.6;
+  for(let n=1;n<=N;n++){const a=Math.pow(n,-slope)*(n%2?1:.8)*(1+.25*Math.sin(n*.9));re[n]=a*Math.cos(n*1.7);im[n]=a*Math.sin(n*1.7)}
+  return waveCache[k]=ctx.createPeriodicWave(re,im)}
+function hornNotes(h){return h.n||h.ch.map(r=>h.f*r)}
+const shaper2=(()=>{let c;return()=>{if(c)return c;const n=2048;c=new Float32Array(n);const o=.14,k=3;for(let i=0;i<n;i++){const x=i/n*2-1;c[i]=(Math.tanh(k*(x+o))-Math.tanh(k*o))/Math.tanh(k)}return c}})();
 function startHorn(h,t){
-  const out=ctx.createGain();out.gain.value=.5;out.connect(hornOut());
-  const sat=ctx.createWaveShaper();sat.curve=shaper();sat.oversample='2x';const pre=ctx.createGain();pre.gain.value=.55;pre.connect(sat).connect(out);
-  const nodes=[],voices=[];const n=h.ch.length;
-  h.ch.forEach((r,i)=>{
-    const f=h.f*r,t0=t+Math.random()*.05,o=ctx.createOscillator();o.setPeriodicWave(hornWave(f,h.tone));
-    // pressure build: pitch starts flat and settles, with a slight overshoot
-    o.frequency.setValueAtTime(f*Math.pow(2,-(h.scoop+.6)/12),t0);o.frequency.exponentialRampToValueAtTime(f*1.004,t0+.16+Math.random()*.06);o.frequency.exponentialRampToValueAtTime(f,t0+.35);
-    const dr=drift();dr.playbackRate.value=.6+Math.random()*.8;const dg=ctx.createGain();dg.gain.value=3+Math.random()*3;dr.connect(dg).connect(o.detune);  // ±cents wander
-    const fl=ctx.createOscillator();fl.frequency.value=7+Math.random()*5;const fg=ctx.createGain();fg.gain.value=1.5;fl.connect(fg).connect(o.detune);     // diaphragm flutter
-    const g=ctx.createGain();const lvl=(i===0?1:.8)/Math.sqrt(n);
-    g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(lvl*.35,t0+.03);g.gain.linearRampToValueAtTime(lvl*1.08,t0+.12);g.gain.linearRampToValueAtTime(lvl,t0+.3);
-    const am=ctx.createOscillator();am.frequency.value=3.5+Math.random()*2;const ag=ctx.createGain();ag.gain.value=lvl*.04;am.connect(ag).connect(g.gain);
-    const pan=ctx.createStereoPanner?ctx.createStereoPanner():null;
-    if(pan){pan.pan.value=n>1?(i/(n-1)-.5)*.5:0;o.connect(g).connect(pan).connect(pre)}else o.connect(g).connect(pre);
-    [o,dr,fl,am].forEach(x=>{x.start(t0);track(x)});nodes.push(o,dr,fl,am);voices.push({o,g,f,lvl});
+  const att=h.att??.22,rel=h.rel??.28,air=h.air??.5,notes=hornNotes(h),low=Math.min(...notes);
+  const out=hornBus();out.gain.value=.27/Math.sqrt(notes.length);
+  // air pressure builds quickly then blooms to full: an exponential approach, not a straight ramp
+  const A=Math.max(att,.06),tc=A/3,g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.setTargetAtTime(.95,t,tc);
+  const gainAt=x=>x<=t?0:.95*(1-Math.exp(-(x-t)/tc));
+  const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=low*.6;hp.Q.value=.6;
+  // the big bell's body: weight around the fundamental and second harmonic
+  const body=ctx.createBiquadFilter();body.type='lowshelf';body.frequency.value=Math.max(160,low*2.2);body.gain.value=6;
+  const f1=ctx.createBiquadFilter();f1.type='peaking';f1.frequency.value=Math.min(1500,Math.max(380,low*3.2));f1.gain.value=6;f1.Q.value=1.2;
+  const f2=ctx.createBiquadFilter();f2.type='peaking';f2.frequency.value=2300+h.tone*900;f2.gain.value=2+h.tone*3;f2.Q.value=1;
+  // brightness blooms open as the horn comes up to pressure and closes again as it dies
+  const top=1600+h.tone*4200,lp=ctx.createBiquadFilter();lp.type='lowpass';lp.Q.value=.7;lp.frequency.setValueAtTime(top*.3,t);lp.frequency.setTargetAtTime(top,t+.01,A*.45);
+  // asymmetric clipping: the diaphragm slaps its seat harder one way, which adds the brassy even harmonics
+  const ws=ctx.createWaveShaper();ws.curve=shaper2();ws.oversample='4x';
+  const pre=ctx.createGain();pre.gain.value=.42;
+  pre.connect(ws).connect(hp).connect(body).connect(f1).connect(f2).connect(lp).connect(g).connect(out);
+  const oscs=[],wave=hornWave(h.tone),off=()=>Math.random()*2.6;
+  // uneven reed buzz: random, slow wobble in loudness (not a steady tremolo)
+  const rn=noise(),rl=ctx.createBiquadFilter();rl.type='lowpass';rl.frequency.value=12;const rg=ctx.createGain();rg.gain.value=.22;
+  rn.connect(rl).connect(rg).connect(g.gain);rn.start(t,off());track(rn);oscs.push([rn,0]);
+  notes.forEach((f,i)=>{
+    // air reaches each bell a few milliseconds apart, so a chord speaks unevenly rather than all at once
+    const tb=t+(i?.008+Math.random()*.035:0),o=ctx.createOscillator();o.setPeriodicWave(wave);o.detune.value=i?(Math.random()*8-4):0;
+    o.frequency.setValueAtTime(f*Math.pow(2,-h.scoop/12),tb);o.frequency.exponentialRampToValueAtTime(f*.996,tb+Math.max(.08,att*.9));o.frequency.linearRampToValueAtTime(f,tb+att*1.6+.1);
+    // each bell drifts slowly and jitters at random, so the chord beats unevenly like a real set
+    const l=ctx.createOscillator();l.frequency.value=.12+Math.random()*.25;const lg=ctx.createGain();lg.gain.value=4;l.connect(lg).connect(o.detune);l.start(t);track(l);oscs.push([l,0]);
+    const jn=noise(),jl=ctx.createBiquadFilter();jl.type='lowpass';jl.frequency.value=28;const jg=ctx.createGain();jg.gain.value=55;
+    jn.connect(jl).connect(jg).connect(o.detune);jn.start(t,off());track(jn);oscs.push([jn,0]);
+    const og=ctx.createGain();og.gain.setValueAtTime(0,t);og.gain.setValueAtTime(0,tb);og.gain.linearRampToValueAtTime(i===0?1:.8,tb+.015);o.connect(og).connect(pre);o.start(t);track(o);oscs.push([o,f]);
   });
-  // compressed-air hiss, strongest as the valve opens
-  const hs=noise(),hb=ctx.createBiquadFilter();hb.type='bandpass';hb.frequency.value=3800;hb.Q.value=.7;const hg=ctx.createGain();
-  hg.gain.setValueAtTime(0,t);hg.gain.linearRampToValueAtTime(.09,t+.02);hg.gain.exponentialRampToValueAtTime(.018,t+.25);
-  hs.connect(hb).connect(hg).connect(out);hs.start(t);track(hs);nodes.push(hs);
+  // breathy air through the bells, strongest as the valve opens and as it shuts
+  const nz=noise(),nb=ctx.createBiquadFilter();nb.type='bandpass';nb.frequency.value=1500+h.tone*900;nb.Q.value=.9;
+  const ng=ctx.createGain();ng.gain.setValueAtTime(0,t);ng.gain.linearRampToValueAtTime(.18*air,t+.025);ng.gain.setTargetAtTime(.04*air,t+.06,.12);
+  nz.connect(nb).connect(ng).connect(out);nz.start(t,off());track(nz);oscs.push([nz,0]);
+  const first=oscs.find(([o,f])=>f)[0];const ended=new Promise(res=>{first.addEventListener('ended',res);setTimeout(res,1e4*60)});
   let done=false;
   return {release(at){
-    if(done)return;done=true;const r=Math.max(at??ctx.currentTime,t+.12);
-    // valve closes: pressure drops, pitch sags, sound chokes off quickly
-    voices.forEach(({o,g,f,lvl})=>{g.gain.cancelScheduledValues(r);g.gain.setValueAtTime(lvl,r);g.gain.exponentialRampToValueAtTime(lvl*.25,r+.06);g.gain.exponentialRampToValueAtTime(.0005,r+.2);
-      o.frequency.cancelScheduledValues(r);o.frequency.setValueAtTime(f,r);o.frequency.exponentialRampToValueAtTime(f*Math.pow(2,-.7/12),r+.2)});
-    hg.gain.cancelScheduledValues(r);hg.gain.setValueAtTime(.018,r);hg.gain.linearRampToValueAtTime(.05,r+.02);hg.gain.exponentialRampToValueAtTime(.0005,r+.18);
-    nodes.forEach(x=>{try{x.stop(r+.25)}catch(e){}});
+    if(done)return ended;done=true;const r=Math.max(at??ctx.currentTime,t+.09),v=gainAt(r);
+    // valve closes: pressure dies away on a curve, the tone darkens and sags, a puff of air, then the bowl rings on
+    g.gain.cancelScheduledValues(r);g.gain.setValueAtTime(v,r);g.gain.setTargetAtTime(0,r,rel/3.2);
+    lp.frequency.cancelScheduledValues(r);lp.frequency.setValueAtTime(top,r);lp.frequency.setTargetAtTime(top*.25,r,rel/2.5);
+    ng.gain.cancelScheduledValues(r);ng.gain.setValueAtTime(.04*air,r);ng.gain.linearRampToValueAtTime(.11*air,r+.035);ng.gain.setTargetAtTime(0,r+.04,rel/3);
+    oscs.forEach(([o,f])=>{if(f){o.frequency.cancelScheduledValues(r);o.frequency.setValueAtTime(f,r);o.frequency.exponentialRampToValueAtTime(f*.95,r+rel*1.4)}try{o.stop(r+rel*2+.2)}catch(e){}});
+    return ended;
   }};
 }
 /* Programmed pattern: the team's usual blast count and lengths, played automatically. */
-function horn(h,t0){let t=t0;h.b.forEach(([dur,gap])=>{startHorn(h,t).release(t+dur);t+=dur+gap+.05});return t}
+const goals={};
+function horn(h,t0){let t=t0;const ng=Math.max(1,goals[cur.id]||1),pat=h.perGoal?Array.from({length:ng},(_,i)=>[h.b[0][0],i<ng-1?h.b[0][1]:0]):h.b;pat.forEach(([dur,gap])=>{startHorn(h,t).release(t+dur);t+=dur+gap+.05});return t+(h.rel??.28)}
 function crowd(t0,dur=7,peak=.55){
   const n=noise(),bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=900;bp.Q.value=.5;
   const bp2=ctx.createBiquadFilter();bp2.type='peaking';bp2.frequency.value=2400;bp2.gain.value=5;
@@ -474,9 +563,110 @@ function slots(t){ // register cha-ching + slot-machine bells
 function police(t,dur=3){const o=ctx.createOscillator();o.type='square';const f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=2600;
   for(let k=0;k<dur*4;k++){o.frequency.setValueAtTime(k%2?720:960,t+k*.25)}const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.09,t+.05);g.gain.setValueAtTime(.09,t+dur-.1);g.gain.linearRampToValueAtTime(0,t+dur);o.connect(f).connect(g).connect(bus());o.start(t);track(o,t+dur)}
 function lighthouse(t){foghorn(t);foghorn(t+3.4)}
-const FX={cannon,tesla,thunder,siren,roar,howl,quack,foghorn,trumpet,jet,fire,slots,lighthouse,police,stormsiren:siren};
+const FX={icehorn:at=>horn(cur.horn,at),cannon,tesla,thunder,siren,roar,howl,quack,foghorn,trumpet,jet,fire,slots,lighthouse,police,stormsiren:siren};
 
 /* Public-domain organ cues and chant rhythms */
+/* ---------------- CROWD CHANTS ----------------
+   A chant is sung by a crowd of shouting voices. Each voice is a buzzing vocal source (pitch and breath)
+   shaped by three vowel resonances (formants) that move from sound to sound, with bursts and hisses for
+   the consonants. Every voice has its own pitch, voice size, loudness and timing, so the words smear the
+   way 18,000 people do, and a crowd roar, crowd claps and the arena echo sit under it.
+   Words and rhythms come from the chant research (sources in the notes): "Let's go X" is four chanted
+   beats then five claps (clap, clap, clap-clap-clap); "Go X Go" is three even shouts with a drum. */
+const VOW={a:[800,1250,2600],ah:[760,1200,2550],ae:[740,1700,2450],e:[600,1750,2550],ee:[320,2250,2950],ih:[420,1950,2550],
+  uh:[650,1200,2450],aw:[680,1000,2500],o:[520,880,2450],oo:[350,900,2300],er:[500,1380,1720],ai:['a','ee'],ay:['e','ee'],oy:['o','ee'],ow:['a','oo']};
+/* consonants: plosive [band Hz], hiss [band Hz, level], or voiced glide [F1,F2,F3] */
+const CON={p:{b:900},b:{b:700,v:1},t:{b:4200},d:{b:3600,v:1},k:{b:2000},g:{b:1800,v:1},ch:{b:3000,h:[3200,.5]},j:{b:2800,v:1,h:[3000,.35]},
+  s:{h:[6500,.7]},sh:{h:[3200,.7]},f:{h:[5200,.3]},h:{h:[1500,.35]},z:{h:[6000,.45],v:1},v:{h:[4500,.2],v:1},
+  l:{g:[360,1250,2700]},r:{g:[420,1100,1550]},w:{g:[300,650,2300]},y:{g:[280,2200,3000]},n:{g:[280,1600,2600]},m:{g:[280,1100,2400]},ng:{g:[300,2000,2700]}};
+const vf=v=>{const x=VOW[v];return typeof x[0]==='string'?[VOW[x[0]],VOW[x[1]]]:[x,x]};
+/* syllable: [onset consonants, vowel, coda consonants, start beat, length in beats, pitch x, loudness] */
+const S=(on,v,co,at,len,p=1,acc=1)=>({on:on?on.split('+'):[],v,co:co?co.split('+'):[],at,len,p,acc});
+let crowdVoices=26;
+function crowdVoice(t0,syls,beat,o){
+  const male=Math.random()<.68,f0=(male?165+Math.random()*95:290+Math.random()*120),fs=(male?1:1.14)*(.93+Math.random()*.12);
+  const lag=(Math.random()-.5)*.075+Math.random()*.03,vol=(.55+Math.random()*.45)/Math.sqrt(crowdVoices);
+  const src=ctx.createOscillator();src.type='sawtooth';const jit=noise(),jl=ctx.createBiquadFilter();jl.type='lowpass';jl.frequency.value=22;const jg=ctx.createGain();jg.gain.value=70;
+  jit.connect(jl).connect(jg).connect(src.detune);
+  const br=noise(),brg=ctx.createGain();brg.gain.value=.3;br.connect(brg);
+  const env=ctx.createGain();env.gain.value=0;const pan=ctx.createStereoPanner?ctx.createStereoPanner():null;if(pan)pan.pan.value=Math.random()*1.6-.8;
+  const F=[0,1,2].map(k=>{const b=ctx.createBiquadFilter();b.type='bandpass';b.Q.value=[5,9,12][k];const g=ctx.createGain();g.gain.value=[1,.55,.3][k]*[2.2,3,4][k];
+    src.connect(b);brg.connect(b);b.connect(g).connect(env);return b});
+  const cn=noise(),cb=ctx.createBiquadFilter();cb.type='bandpass';cb.Q.value=1.4;const cg=ctx.createGain();cg.gain.value=0;cn.connect(cb).connect(cg).connect(o);
+  (pan?env.connect(pan):env).connect(o);
+  let last=t0;
+  syls.forEach(sy=>{
+    const st=t0+sy.at*beat+lag+(Math.random()-.5)*.02,dur=Math.max(.16,sy.len*beat*.82),[v1,v2]=vf(sy.v),pk=vol*sy.acc;
+    const pitch=f0*sy.p;src.frequency.setValueAtTime(pitch*.94,st);src.frequency.linearRampToValueAtTime(pitch,st+.07);src.frequency.linearRampToValueAtTime(pitch*.9,st+dur);
+    let vs=st;// vowel start
+    sy.on.forEach(c=>{const C=CON[c];if(!C)return;
+      if(C.b){cb.frequency.setValueAtTime(C.b,st);cg.gain.setValueAtTime(0,st);cg.gain.linearRampToValueAtTime(pk*2.4,st+.006);cg.gain.exponentialRampToValueAtTime(.0005,st+.045);vs=Math.max(vs,st+.03)}
+      if(C.h){cb.frequency.setValueAtTime(C.h[0],st);cg.gain.setValueAtTime(0,st);cg.gain.linearRampToValueAtTime(pk*3*C.h[1],st+.03);cg.gain.linearRampToValueAtTime(0,st+.1);vs=Math.max(vs,st+.08)}
+      if(C.g){F.forEach((b,k)=>b.frequency.setValueAtTime(C.g[k]*fs,st));vs=Math.max(vs,st+.02)}});
+    if(!sy.on.some(c=>CON[c]&&CON[c].g))F.forEach((b,k)=>b.frequency.setValueAtTime(v1[k]*fs,vs));
+    F.forEach((b,k)=>{b.frequency.linearRampToValueAtTime(v1[k]*fs,vs+.06);b.frequency.linearRampToValueAtTime(v2[k]*fs,vs+Math.max(.08,dur*.85))});
+    env.gain.setValueAtTime(0,Math.max(last,vs-.005));env.gain.setValueAtTime(0,vs);env.gain.linearRampToValueAtTime(pk,vs+.035);
+    env.gain.linearRampToValueAtTime(pk*.8,vs+dur*.6);
+    const ve=st+dur;let ce=ve;
+    sy.co.forEach((c,i)=>{const C=CON[c];if(!C)return;const ct=ve+i*.05;
+      if(C.g){F.forEach((b,k)=>b.frequency.linearRampToValueAtTime(C.g[k]*fs,ct+.04))}
+      if(C.b){cb.frequency.setValueAtTime(C.b,ct);cg.gain.setValueAtTime(0,ct);cg.gain.linearRampToValueAtTime(pk*1.6,ct+.005);cg.gain.exponentialRampToValueAtTime(.0005,ct+.04)}
+      if(C.h){cb.frequency.setValueAtTime(C.h[0],ct);cg.gain.setValueAtTime(0,ct);cg.gain.linearRampToValueAtTime(pk*2.6*C.h[1],ct+.02);cg.gain.linearRampToValueAtTime(0,ct+.12)}
+      ce=ct+(C.h?.12:.05)});
+    env.gain.linearRampToValueAtTime(0,ve+(sy.co.some(c=>CON[c]&&CON[c].g)?.06:.03));last=Math.max(ce,ve+.07)});
+  const end=last+.2;[src,jit,br,cn].forEach(n=>{n.start(Math.max(ctx.currentTime,t0-.05),n===src?undefined:Math.random()*2.5);track(n,end)});
+}
+/* many hands: each clap is a few dozen people a little out of step */
+function crowdClap(t,vol=1){for(let i=0;i<12;i++)clap(t+(Math.random()-.4)*.05,.55*vol*(.6+Math.random()*.6))}
+function crowdStomp(t){for(let i=0;i<3;i++)stomp(t+Math.random()*.04)}
+function crowdSay(t0,syls,beat,{voices=26,claps=[],drum=[],stomps=[],roar=.18}={}){
+  crowdVoices=voices;const o=ctx.createGain();o.gain.value=.9;const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=5200;o.connect(lp).connect(bus());
+  for(let i=0;i<voices;i++)crowdVoice(t0,syls,beat,o);
+  claps.forEach(c=>crowdClap(t0+c*beat));drum.forEach(c=>drum1(t0+c*beat));stomps.forEach(c=>crowdStomp(t0+c*beat));
+  const len=Math.max(...syls.map(s=>s.at+s.len),...claps,...drum,...stomps,0)*beat+.6;if(roar)crowd(Math.max(ctx.currentTime,t0-.3),len+1.5,roar);return t0+len;
+}
+function drum1(t){const o=ctx.createOscillator();o.frequency.setValueAtTime(95,t);o.frequency.exponentialRampToValueAtTime(48,t+.18);const g=ctx.createGain();g.gain.setValueAtTime(.9,t);g.gain.exponentialRampToValueAtTime(.001,t+.35);
+  const n=noise(),nb=ctx.createBiquadFilter();nb.type='bandpass';nb.frequency.value=900;const ng=ctx.createGain();ng.gain.setValueAtTime(.25,t);ng.gain.exponentialRampToValueAtTime(.001,t+.06);
+  o.connect(g).connect(bus());n.connect(nb).connect(ng).connect(bus());o.start(t);n.start(t);track(o,t+.4);track(n,t+.1)}
+/* repeat a chant cycle n times */
+function cycles(fn,n){const out=[];for(let r=0;r<n;r++)out.push(...fn(r));return out}
+/* team words for the chant, as syllables (how the crowd says it) */
+const NAME={ANA:[['d','uh','k+s']],BOS:[['b+r','oo',''],['','ih','n+z']],BUF:[['b','uh','f'],['f','uh',''],['l','o','']],CAR:[['k','ay','n+z']],
+  CHI:[['h','aw','k+s']],COL:[['','ae','v+z']],DET:[['r','e','d'],['w','ih','ng+z']],EDM:[['','oy','l'],['','er','z']],FLA:[['k','ae','t+s']],
+  MIN:[['w','ai','l+d']],NSH:[['p+r','e','d'],['','uh',''],['t','er','z']],NJD:[['d','e','v'],['','uh','l+z']],NYI:[['','ai',''],['l','uh','n'],['d','er','z']],
+  NYR:[['r','ay','n'],['j','er','z']],PHI:[['f+l','ai',''],['','er','z']],PIT:[['p','e','n+z']],SJS:[['sh','ah','r+k+s']],SEA:[['k+r','ae','k'],['','uh','n']],
+  STL:[['b+l','oo','z']],TBL:[['b','o','l+t+s']],UTA:[['y','oo',''],['t','aw','']],WSH:[['k','ae','p+s']],
+  CGY:[['f+l','ay','m+z']],LAK:[['k','ih','ng+z']],MTL:[['h','ae','b+z']],OTT:[['s','e','n+z']],TOR:[['l','ee','f+s']],VAN:[['k','uh',''],['n','uh','k+s']],
+  VGK:[['n','ai','t+s']],WPG:[['j','e','t+s']]};
+/* "Let's go X": LET'S on 1, GO on 2, the name on 3-4, then claps on 5, 6, 7, 7-and, 8 */
+function letsGo(id){const nm=NAME[id],sl=nm.length===1?[[2,1.6]]:nm.length===2?[[2,1],[3,1]]:[[2,.5],[2.5,.5],[3,1]];
+  return r=>{const b=r*8;return [S('l','e','t+s',b,.8,1,.9),S('g','ow','',b+1,.9,1.06,1),...nm.map((x,i)=>S(x[0],x[1],x[2],b+sl[i][0],sl[i][1],i===0?1.12:1.02,1.05))]}}
+const letsGoClaps=r=>[4,5,6,6.5,7].map(c=>c+r*8);
+function goXGo(id){const nm=NAME[id];return r=>{const b=r*4,nb=nm.length===1?[[1,.9]]:[[1,.45],[1.5,.6]];
+  return [S('g','o','',b,.9,1,1),...nm.map((x,i)=>S(x[0],x[1],x[2],b+nb[i][0],nb[i][1],1.1,1.05)),S('g','ow','',b+2,1,1.04,1.1)]}}
+const CHANTS={
+  letsgo:id=>({b:`Let's go ${shortName(id)}`,run:t=>crowdSay(t,cycles(letsGo(id),3),.4,{claps:cycles(letsGoClaps,3)})}),
+  gox:id=>({b:`Go ${shortName(id)} Go`,run:t=>crowdSay(t,cycles(goXGo(id),4),.5,{drum:cycles(r=>[0,1,2].map(c=>c+r*4),4)})}),
+  cbj:()=>({b:'C-B-J',run:t=>crowdSay(t,cycles(r=>[S('s','ee','',r*4,.8,1,1),S('b','ee','',r*4+1,.8,1.04,1),S('j','ay','',r*4+2,1,1.1,1.1)],4),.45,{drum:cycles(r=>[0,1,2].map(c=>c+r*4),4)})}),
+  yes:()=>({b:'YES! YES! YES!',run:t=>crowdSay(t,cycles(r=>[S('y','e','s',r,.7,1.1,1.1)],9),.42,{roar:.25})}),
+  dallas:()=>({b:'Dallas! Stars!',run:t=>crowdSay(t,cycles(r=>[S('d','ae','',r*4,.5,1,1),S('l','uh','s',r*4+.5,.6,.98,1),S('s+t','ah','r+z',r*4+1.5,1,1.12,1.15)],3),.45,{roar:.3})}),
+  caps:()=>({b:'C-A-P-S, Caps! Caps! Caps!',run:t=>crowdSay(t,cycles(r=>[S('s','ee','',r*8,.8),S('','ay','',r*8+1,.8),S('p','ee','',r*8+2,.8),S('','e','s',r*8+3,.8,1.04),
+    ...[4,5,6].map(c=>S('k','ae','p+s',r*8+c,.8,1.1,1.1))],2),.42)}),
+  defense:()=>({b:'De-fense',run:t=>crowdSay(t,cycles(r=>[S('d','ee','',r*4,.8,1.08,1.1),S('f','e','n+s',r*4+1,.9,.98,1)],4),.45,{stomps:cycles(r=>[2,3].map(c=>c+r*4),4)})}),
+};
+function shortName(id){return {ANA:'Ducks',BOS:'Bruins',BUF:'Buffalo',CAR:'Canes',CHI:'Hawks',COL:'Avs',DET:'Red Wings',EDM:'Oilers',FLA:'Cats',MIN:'Wild',NSH:'Predators',NJD:'Devils',
+  NYI:'Islanders',NYR:'Rangers',PHI:'Flyers',PIT:'Pens',SJS:'Sharks',SEA:'Kraken',STL:'Blues',TBL:'Bolts',UTA:'Utah',WSH:'Caps',CGY:'Flames',LAK:'Kings',MTL:'Habs',OTT:'Sens',
+  TOR:'Leafs',VAN:'Canucks',VGK:'Knights',WPG:'Jets'}[id]||id}
+/* Each team's documented chants (chant research, Nov 2026). "weak" = no direct source found; the words are the usual form. */
+const TEAM_CHANTS={ANA:[['letsgo','weak']],BOS:[['letsgo','medium']],BUF:[['letsgo','strong']],CGY:[['gox','medium']],CAR:[['letsgo','strong']],CHI:[['letsgo','weak']],
+  COL:[['letsgo','strong']],CBJ:[['cbj','medium']],DAL:[['dallas','strong']],DET:[['letsgo','medium']],EDM:[['letsgo','strong']],FLA:[['letsgo','medium']],
+  LAK:[['gox','strong']],MIN:[['letsgo','strong']],MTL:[['gox','medium']],NSH:[['letsgo','medium']],NJD:[['letsgo','medium']],NYI:[['letsgo','strong'],['yes','strong']],
+  NYR:[['letsgo','strong']],OTT:[['gox','strong']],PHI:[['letsgo','strong']],PIT:[['letsgo','strong']],SJS:[['letsgo','weak']],SEA:[['letsgo','strong']],
+  STL:[['letsgo','strong']],TBL:[['letsgo','weak']],TOR:[['gox','strong']],UTA:[['letsgo','strong']],VAN:[['gox','medium']],VGK:[['gox','medium']],
+  WSH:[['letsgo','strong'],['caps','strong']],WPG:[['gox','strong']]};
+/* Boo: a long, falling "boooo" from the stands */
+function crowdBoo(t0){return crowdSay(t0,[S('b','oo','',0,3.2,.85,1)],1,{voices:24,roar:.12})}
+
 const ORGAN={
   saints:t=>seq([[60,1],[64,1],[65,1],[67,4],[null,1],[60,1],[64,1],[65,1],[67,4],[null,1],[60,1],[64,1],[65,1],[67,2],[64,2],[60,2],[64,2],[62,4]],200,t),
   charge:t=>seq([[67,.5],[72,.5],[76,.5],[79,1],[76,.5],[79,2]],150,t),
@@ -490,28 +680,44 @@ const ORGAN={
 
 /* ---------------- USER CLIPS (IndexedDB, per browser) ---------------- */
 let db;const clips={};
+/* Goal songs come from the viewer's own library (Load folder / Load files); none are stored with this page. */
+const BUILTIN={};
+const HRMS={"BOS":0.1821,"BUF":0.1334,"DET":0.1539,"FLA":0.156,"MTL":0.0899,"OTT":0.0993,"TBL":0.1737,"TOR":0.1018,"CAR":0.1401,"CBJ":0.1812,"NJD":0.1494,"NYI":0.1284,"NYR":0.0992,"PHI":0.2092,"PIT":0.0951,"WSH":0.1338,"CHI":0.1303,"COL":0.2002,"DAL":0.1214,"MIN":0.1447,"NSH":0.1283,"STL":0.1808,"UTA":0.1316,"WPG":0.088,"ANA":0.2045,"CGY":0.1034,"EDM":0.0844,"LAK":0.0892,"SJS":0.1828,"SEA":0.2216,"VAN":0.1467,"VGK":0.2018};
+const bfetch={};function builtinClip(id){const url=BUILTIN[id];return {builtin:true,name:url.split('/').pop()+'.mp3',
+  prefetch(){return bfetch[id]||(bfetch[id]=fetch(url).then(r=>{if(!r.ok)throw new Error('fetch '+r.status);return r.arrayBuffer()}).catch(e=>{delete bfetch[id];throw e}))},
+  async arrayBuffer(){return (await this.prefetch()).slice(0)}}}
+function addBuiltins(){for(const id in BUILTIN)if(!clips[id+':s'])clips[id+':s']=builtinClip(id)}
+addBuiltins();
 function openDB(){return new Promise(res=>{try{const r=indexedDB.open('horns',1);r.onupgradeneeded=()=>r.result.createObjectStore('c');r.onsuccess=()=>{db=r.result;res()};r.onerror=()=>res()}catch(e){res()}})}
 function dbPut(k,v){try{db&&db.transaction('c','readwrite').objectStore('c').put(v,k)}catch(e){}}
 function dbDel(k){try{db&&db.transaction('c','readwrite').objectStore('c').delete(k)}catch(e){}}
 function dbAll(){return new Promise(res=>{try{if(!db)return res();const s=db.transaction('c').objectStore('c'),r=s.openCursor();r.onsuccess=()=>{const c=r.result;if(c){clips[c.key]=c.value;c.continue()}else res()};r.onerror=()=>res()}catch(e){res()}})}
+/* Decoded audio is cached per file, so a song or horn file is fetched and decoded once. */
+const decCache=new WeakMap();
+function decodeClip(b){let p=decCache.get(b);if(!p){p=(async()=>ctx.decodeAudioData(await b.arrayBuffer()))();p.catch(()=>decCache.delete(b));decCache.set(b,p)}return p}
+function bufRMS(buf,maxSec=60){if(buf._rms)return buf._rms;let s=0,n=0;const lim=Math.min(buf.length,Math.floor(buf.sampleRate*maxSec));
+  for(let c=0;c<buf.numberOfChannels;c++){const d=buf.getChannelData(c);for(let i=0;i<lim;i+=5){s+=d[i]*d[i];n++}}return buf._rms=Math.sqrt(s/Math.max(1,n))||.1}
+/* Song level: the song sits at 75% of the horn's loudness for that team, whatever the master volume
+   (both run through the same master). The horn's loudness is measured from the synthesized horn, or from
+   the team's horn file when there is one. */
+const SONG_RATIO=.6;
+async function songGain(id,buf){let hr=HRMS[id]||.12;const hc=clips[id+':h'];if(hc){try{hr=bufRMS(await decodeClip(hc))*.9}catch(e){}}
+  return Math.min(4,SONG_RATIO*hr/bufRMS(buf))}
 async function holdClip(blob){
-  const buf=await ctx.decodeAudioData(await blob.arrayBuffer());const s=ctx.createBufferSource();s.buffer=buf;const g=ctx.createGain();g.gain.value=.9;s.connect(g).connect(dry);
-  const t=ctx.currentTime;s.start(t);track(s);let done=false;
-  return {release(){if(done)return;done=true;const r=Math.max(ctx.currentTime,t+.05);g.gain.setValueAtTime(.9,r);g.gain.linearRampToValueAtTime(0,r+.08);try{s.stop(r+.1)}catch(e){}}};
+  const buf=await decodeClip(blob);const s=ctx.createBufferSource();s.buffer=buf;const g=ctx.createGain();g.gain.value=.9;s.connect(g).connect(dry);
+  const t=ctx.currentTime;s.start(t);track(s);let done=false;const ended=new Promise(res=>s.addEventListener('ended',res));
+  return {release(){if(done)return ended;done=true;const r=Math.max(ctx.currentTime,t+.05);g.gain.setValueAtTime(.9,r);g.gain.linearRampToValueAtTime(0,r+.08);try{s.stop(r+.1)}catch(e){}return ended}};
 }
-/* Goal song: plays automatically or on demand, and can be stopped */
-let songNode=null,songGain=null;
-async function playSong(at){
-  initAudio();await ctx.resume();stopSong(true);const t=cur,blob=clips[t.id+':s'];if(!blob)return;
-  const buf=await ctx.decodeAudioData(await blob.arrayBuffer());const s=ctx.createBufferSource();s.buffer=buf;const g=ctx.createGain();g.gain.value=.9;s.connect(g).connect(dry);
-  const st=Math.max(at??0,ctx.currentTime);s.start(st);track(s);songNode=s;songGain=g;
-  s.addEventListener('ended',()=>{if(songNode===s){songNode=null;songUI();if($('npTag').textContent==='NOW PLAYING')standby()}});
-  $('npTag').textContent='NOW PLAYING';$('npSong').textContent=t.song[0];$('npArtist').textContent=t.song[1];songUI();onAir((st+buf.duration-ctx.currentTime)*1000);
+/* Goal song: plays from the top for up to 60 s, fades out over its last 3 s, and reports when it has really stopped. */
+async function playSong(blob,t,max=60,id=cur.id){
+  const buf=await decodeClip(blob),gv=await songGain(id,buf);const s=ctx.createBufferSource();s.buffer=buf;const g=ctx.createGain();g.gain.value=gv;s.connect(g).connect(songBus);
+  const st=Math.max(t,ctx.currentTime);s.start(st);track(s);const ended=new Promise(res=>s.addEventListener('ended',res));
+  if(buf.duration>max){g.gain.setValueAtTime(gv,st+max-3);g.gain.linearRampToValueAtTime(0,st+max);s.stop(st+max+.05)}
+  else if(buf.duration>4){g.gain.setValueAtTime(gv,st+buf.duration-2.5);g.gain.linearRampToValueAtTime(0,st+buf.duration)}
+  return {end:st+Math.min(buf.duration,max),ended,stop(f=.6){const n=ctx.currentTime;try{g.gain.cancelScheduledValues(n);g.gain.setValueAtTime(g.gain.value,n);g.gain.linearRampToValueAtTime(0,n+f);s.stop(n+f+.05)}catch(e){}}};
 }
-function stopSong(quiet){if(!songNode)return;const s=songNode,g=songGain;songNode=null;const r=ctx.currentTime;g.gain.setValueAtTime(g.gain.value,r);g.gain.linearRampToValueAtTime(0,r+.6);try{s.stop(r+.65)}catch(e){}if(!quiet){standby()}songUI()}
-function songUI(){const has=!!clips[cur.id+':s'];$('songBtn').hidden=!has;$('songBtn').textContent=songNode?'■ Stop song':'▶ Play song'}
-async function playClip(blob,t){
-  const buf=await ctx.decodeAudioData(await blob.arrayBuffer());const s=ctx.createBufferSource();s.buffer=buf;const g=ctx.createGain();g.gain.value=.9;s.connect(g).connect(dry);
+async function playClip(blob,t,dest=dry){
+  const buf=await decodeClip(blob);const s=ctx.createBufferSource();s.buffer=buf;const g=ctx.createGain();g.gain.value=.9;s.connect(g).connect(dest);
   s.start(Math.max(t,ctx.currentTime));track(s);return Math.max(t,ctx.currentTime)+buf.duration;
 }
 
@@ -522,14 +728,31 @@ function setTeam(t){
   cur=t;const r=document.documentElement.style;r.setProperty('--team',t.c[0]);r.setProperty('--team2',t.c[1]);
   $('tdiv').textContent=t.d+" Division · "+t.id;$('tname').textContent=t.n;$('tarena').textContent=t.a;
   const h=t.horn,blasts=h.b.length,len=h.b.reduce((s,[d,g])=>s+d+g,0).toFixed(1);
-  $('tmeta').innerHTML=`<span class="chip">HORN ${blasts>1?blasts+' BLASTS':'1 BLAST'} · ${len}s</span><span class="chip">FUND ${h.f} Hz</span>`+
-    t.fx.map(f=>`<span class="chip">+ ${fxName[f].toUpperCase()}</span>`).join('')+`<a class="chip conf ${t.conf[1]}" href="${t.conf[2]}" target="_blank" rel="noopener" title="Source for the goal song">SONG: ${t.conf[0].toUpperCase()} ↗</a>`+(clips[t.id+':h']?'<span class="chip user">YOUR HORN FILE</span>':'')+(clips[t.id+':s']?'<span class="chip user">YOUR SONG FILE</span>':'');
-  $('trad').innerHTML=[`Horn: ${HW[t.id][1]} (${HW[t.id][0]==='Recording'?'played as a recording':'real horn'}, ${HW[t.id][2]}). ${HW[t.id][3]}.`,...t.trad].map(x=>`<li>${x}</li>`).join('');
+  $('tmeta').innerHTML=`<span class="chip">HORN ${h.perGoal?'1 BLAST PER GOAL':blasts>1?blasts+' BLASTS':'1 BLAST'}${h.perGoal?'':' · '+len+'s'}</span><span class="chip" title="Bell pitches">${(h.n||[h.f]).map(x=>Math.round(x)).join(' · ')} Hz</span><button class="chip" id="gcount" title="Goals counted tonight (tap to reset)">GOAL ${goals[t.id]||0} TONIGHT</button>`+
+    t.fx.map(f=>`<span class="chip">+ ${fxName[f].toUpperCase()}</span>`).join('')+`<a class="chip conf ${t.conf[1]}" href="${t.conf[2]}" target="_blank" rel="noopener" title="Source for the goal song">SONG: ${t.conf[0].toUpperCase()} ↗</a>`+(clips[t.id+':h']?'<span class="chip user">YOUR HORN FILE</span>':'')+(clips[t.id+':s']?(clips[t.id+':s'].builtin?'<span class="chip user">BUILT-IN SONG</span>':'<span class="chip user">YOUR SONG FILE</span>'):'');
+  $('trad').innerHTML=[`Horn: ${HW[t.id][1]} (${HW[t.id][0]==='Recording'?'played as a recording':'real horn'}, ${HW[t.id][2]}). ${HW[t.id][3]}.`,...t.trad].map(x=>`<li>${x}</li>`).join('')+(OPEN[t.id]?`<li class="open"><b>Still unproven:</b> ${OPEN[t.id]}</li>`:'');
   document.querySelectorAll('.tbtn').forEach(b=>b.setAttribute('aria-pressed',b.dataset.id===t.id));
-  standby();buildPads();renderLibrary();
+  standby();buildPads();renderLibrary();paFill();
   try{localStorage.setItem('team',t.id)}catch(e){}
+  const sc=clips[t.id+':s'];if(sc&&sc.builtin)try{sc.prefetch().catch(()=>{})}catch(e){}
 }
-function standby(){$('npTag').textContent='STANDBY';$('npSong').textContent=cur.song[0];$('npArtist').textContent=cur.song[1]+' · goal song';if(typeof songUI==='function')songUI()}
+/* One way to start and stop the goal song, used by the goal flow, the song pad, the button and the S key. */
+async function startSong(id,at){
+  if(songNow&&!songNow.done){toast('The song is already playing');return null}
+  const clip=clips[id+':s'];if(!clip)return null;initAudio();ctx.resume();
+  const sn={team:id,done:false};songNow=sn;songBtn();let sg;
+  try{sg=await playSong(clip,at??ctx.currentTime+.03,60,id)}catch(e){sn.done=true;songBtn();toast('That song file could not be played');return null}
+  if(sn.done){sg.stop(.05);return null}      // stopped while it was still loading
+  songCtl=sg;const T0=T.find(x=>x.id===id);
+  if(id===cur.id){$('npTag').textContent='NOW PLAYING';$('npSong').textContent=T0.song[0];$('npArtist').textContent=T0.song[1]}
+  onAir((sg.end-ctx.currentTime)*1000);
+  sg.ended.then(()=>{sn.done=true;if(songCtl===sg)songCtl=null;if(songNow===sn){songBtn();if(!sn.stopped&&$('npTag').textContent==='NOW PLAYING')standby()}});
+  return sg}
+function stopSong(){if(!songNow||songNow.done)return;const sn=songNow;sn.stopped=true;if(songCtl)songCtl.stop(.6);else sn.done=true;songCtl=null;sn.done=true;standby();songBtn()}
+function songPlaying(){return !!(songNow&&!songNow.done)}
+function toggleSong(){if(songPlaying())stopSong();else if(clips[cur.id+':s']){paUnlock();startSong(cur.id)}}
+function songBtn(){const b=$('songBtn');if(!b)return;const on=songPlaying();b.hidden=!(on||clips[cur.id+':s']);b.textContent=on?'■ Stop song':'▶ Play song';b.classList.toggle('on',on)}
+function standby(){$('npTag').textContent='STANDBY';$('npSong').textContent=cur.song[0];$('npArtist').textContent=cur.song[1]+' · goal song';songBtn()}
 function ytLink(q){return 'https://www.youtube.com/results?search_query='+encodeURIComponent(q)}
 function buildPads(){
   const t=cur,P=[
@@ -538,17 +761,17 @@ function buildPads(){
    ...t.fx.map(f=>({k:'',cls:'team',b:fxName[f],s:'Fires with goals',fn:at=>(FX[f](at),at+3)})),
    ...t.pre.map(f=>({k:'',cls:'team',b:fxName[f],s:'Pregame',fn:at=>(FX[f](at),at+4)})),
    ...(t.organ?[{k:'',cls:'team',b:t.organ[1],s:t.organ[2],fn:at=>ORGAN[t.organ[0]](at)}]:[]),
-   {k:'3',b:'Charge!',s:'Organ',fn:at=>ORGAN.charge(at)},
-   {k:'4',b:`Let's go ${short(t)}`,s:'Organ + claps',fn:at=>ORGAN.letsgo(at)},
+   ...chantPads(t),
+   {k:'3',b:'Charge!',s:'Organ, then the crowd',fn:at=>chargeShout(ORGAN.charge(at))},
    {k:'5',b:'Mexican Hat Dance',s:'Organ',fn:at=>ORGAN.hat(at)},
-   {k:'6',b:'Da-da-da DA-da CHARGE',s:'Organ stab',fn:at=>ORGAN.dadada(at)},
-   {k:'7',b:'De-fense',s:'Stomp + organ',fn:at=>ORGAN.defense(at)},
-   {k:'8',b:'Stomp stomp clap',s:'Crowd rhythm',fn:at=>ORGAN.rock(at)},
+   {k:'6',b:'Da-da-da DA-da CHARGE',s:'Organ, then the crowd',fn:at=>chargeShout(ORGAN.dadada(at))},
+   {k:'7',b:'De-fense',s:'Crowd chant + stomps',fn:at=>CHANTS.defense().run(at)},
+   {k:'8',b:'Stomp stomp clap',s:'Crowd rhythm',fn:at=>{const b=60/80;for(let r=0;r<4;r++){crowdStomp(at+r*b*2);crowdStomp(at+r*b*2+b*.5);crowdClap(at+r*b*2+b,1.3)}return at+8*b}},
    {k:'9',b:'Crowd roar',s:'Bowl noise',fn:at=>(crowd(at,6,.6),at+6)},
-   {k:'0',b:'Boo the ref',s:'Crowd',fn:at=>(boo(at),at+3.5)},
+   {k:'0',b:'Boo the ref',s:'Crowd',fn:at=>crowdBoo(at)},
    {k:'',b:'Period buzzer',s:'Horn-style buzzer',fn:at=>(buzzer(at),at+2.5)},
-   {k:'',b:'PA: goal call',s:'Announcer (browser voice)',fn:at=>(pa(true),at+3)},
-   clips[t.id+':s']?{k:'',cls:'song',b:'♪ '+t.song[0],s:t.song[1]+' · your file',fn:at=>{playSong(at);return at+30}}:{k:'',cls:'song',b:'♪ '+t.song[0],s:t.song[1]+' · search online ↗',link:ytLink(t.song[0]+' '+t.song[1]+' '+t.n+' goal song')},
+   {k:'',b:'PA: goal call',s:'Announcer (device voice)',fn:at=>(pa(true),at+8)},
+   clips[t.id+':s']?{k:'',cls:'song',b:'♪ '+t.song[0],s:t.song[1]+(clips[t.id+':s'].builtin?' · built in':' · your file'),fn:at=>{if(songPlaying()){toast('The song is already playing');return ctx.currentTime+.5}startSong(t.id,at);return at+60}}:{k:'',cls:'song',b:'♪ '+t.song[0],s:t.song[1]+' · search online ↗',link:ytLink(t.song[0]+' '+t.song[1]+' '+t.n+' goal song')},
    {k:'',cls:'song',b:'▶ 2027 horn + song',s:'Reference video · Elite Goal Horns ↗',link:'https://www.youtube.com/watch?v='+REF[t.id]},
    ...t.cues.map(c=>({k:'',cls:'song',b:'♪ '+c[0],s:c[2],link:ytLink(c[0]+' '+c[1]+' '+t.n)})),
   ];
@@ -561,45 +784,108 @@ function buildPads(){
     if(p.k)el.dataset.key=p.k;$('pads').appendChild(el)});
   window._pads=P;
 }
-const fxName={police:'Police siren',slots:'Slot machines',lighthouse:'Lighthouse foghorn',cannon:'Cannon fire',tesla:'Tesla coils',thunder:'Thunder',siren:'Goal siren',stormsiren:'Storm siren',roar:'Cat roar',howl:'Wolf howl',quack:'Duck call',foghorn:'Foghorn',trumpet:'Mammoth trumpet',jet:'Jet flyover',fire:'Flame cannons'};
+const fxName={icehorn:'Horn as the team takes the ice',police:'Police siren',slots:'Slot machines',lighthouse:'Lighthouse foghorn',cannon:'Cannon fire',tesla:'Tesla coils',thunder:'Thunder',siren:'Goal siren',stormsiren:'Storm siren',roar:'Cat roar',howl:'Wolf howl',quack:'Duck call',foghorn:'Foghorn',trumpet:'Mammoth trumpet',jet:'Jet flyover',fire:'Flame cannons'};
 function short(t){return t.n.split(' ').slice(-1)[0].replace('Canadiens','Habs')}
 function hornOrClip(at){if(clips[cur.id+':h']){playClip(clips[cur.id+':h'],at);return at+4}return horn(cur.horn,at)}
-function triggerPad(p,el){initAudio();ctx.resume();const end=p.fn(ctx.currentTime+.03);el.classList.add('hit','playing');setTimeout(()=>el.classList.remove('hit'),120);
+function triggerPad(p,el){paUnlock();initAudio();ctx.resume();const end=p.fn(ctx.currentTime+.03);el.classList.add('hit','playing');setTimeout(()=>el.classList.remove('hit'),120);
   const ms=Math.max(400,((end||ctx.currentTime+1)-ctx.currentTime)*1000);setTimeout(()=>el.classList.remove('playing'),ms);onAir(ms)}
 let airT;function onAir(ms){$('onair').classList.add('live');clearTimeout(airT);airT=setTimeout(()=>$('onair').classList.remove('live'),ms)}
+/* PA goal call: the announcer's usual order (team, scorer, assists, time), spoken in short phrases with
+   pauses, the scorer's last name stretched out, and a natural voice where the device has one.
+   In a goal sequence it waits until the horn and the goal song have really finished. */
+const NICKNAME={ANA:'Ducks',BOS:'Bruins',BUF:'Sabres',CGY:'Flames',CAR:'Hurricanes',CHI:'Blackhawks',COL:'Avalanche',CBJ:'Blue Jackets',DAL:'Stars',DET:'Red Wings',EDM:'Oilers',FLA:'Panthers',LAK:'Kings',MIN:'Wild',MTL:'Canadiens',NSH:'Predators',NJD:'Devils',NYI:'Islanders',NYR:'Rangers',OTT:'Senators',PHI:'Flyers',PIT:'Penguins',SJS:'Sharks',SEA:'Kraken',STL:'Blues',TBL:'Lightning',TOR:'Maple Leafs',UTA:'Mammoth',VAN:'Canucks',VGK:'Golden Knights',WSH:'Capitals',WPG:'Jets'};
+const NOVELTY=/Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Rocko|Grandpa|Grandma|Eddy|Flo|Reed|Sandy|Shelley|Fred|Junior|Ralph|Kathy|Princess|Hysterical|Deranged/i;
+function voiceList(fr){try{return speechSynthesis.getVoices().filter(v=>(fr?/^fr/i:/^en/i).test(v.lang)&&!NOVELTY.test(v.name))}catch(e){return[]}}
+function bestVoice(fr){
+  let want;try{want=localStorage.getItem(fr?'paVoiceFr':'paVoice')}catch(e){}
+  const vs=voiceList(fr);if(want){const v=vs.find(v=>v.name===want);if(v)return v}
+  const score=v=>(/Premium|Enhanced|Natural|Neural|Siri/i.test(v.name)?6:0)+(/Aaron|Evan|Tom|Nathan|Alex|Daniel|Arthur|Gordon|Guy|Andrew|Christopher|Eric|Davis|Brian|Roger|Steffan|Thomas|Nicolas|Felix|Jacques|Male/i.test(v.name)?3:0)+(fr?(/CA/i.test(v.lang)?2:0):(/US/i.test(v.lang)?2:/CA|GB/i.test(v.lang)?1:0))+(/Google/i.test(v.name)?1:0);
+  return vs.sort((a,b)=>score(b)-score(a))[0]||null}
+function paInfo(){let o={};try{o=JSON.parse(localStorage.getItem('pa:'+cur.id)||'{}')}catch(e){}return o}
+function spokenTime(x){const m=String(x||'').trim().match(/^(\d{1,2})[:.](\d{2})$/);if(!m)return null;const mm=+m[1],ss=+m[2];return `${mm===0?'zero':mm} ${ss===0?'even':ss<10?'oh '+ss:ss}`}
+function paScript(){
+  const t=cur,p=paInfo(),nick=NICKNAME[t.id]||short(t),fr=t.lang==='fr',L=[];
+  const who=(num,name)=>[num?`number ${num}`:'',name||''].filter(Boolean).join(', ');
+  const sc=(p.s||'').trim(),scN=(p.sn||'').trim(),as=[[p.a1n,p.a1],[p.a2n,p.a2]].filter(([a,b])=>(a||'').trim()||(b||'').trim()),tm=spokenTime(p.tm);
+  if(fr){
+    L.push({x:'But des Canadiens!',r:.95,p:1.05,fr:1,w:700});
+    if(sc||scN){L.push({x:`Compté par le numéro ${scN||''},`.replace(' ,',','),r:.9,fr:1,w:250});if(sc){const parts=sc.split(' ');if(parts.length>1)L.push({x:parts.slice(0,-1).join(' '),r:.88,fr:1,w:120});L.push({x:parts.slice(-1)[0]+'!',r:.55,p:1.1,fr:1,w:800})}}
+    if(as.length)L.push({x:'Avec l\'aide '+as.map(([n,a])=>`du numéro ${n||''} ${a||''}`.trim()).join(', et ')+'.',r:.9,fr:1,w:700});
+    else if(sc||scN)L.push({x:'Sans aide.',r:.9,fr:1,w:700});
+    if(tm){const [mm,ss]=p.tm.trim().split(/[:.]/).map(Number);L.push({x:`Temps du but: ${mm} minutes ${ss} secondes.`,r:.9,fr:1,w:900})}
+  }
+  L.push({x:`${nick} goal!`,r:.95,p:1.05,w:700});
+  if(sc||scN){
+    L.push({x:`Scored by ${scN?'number '+scN:''}${sc?',':''}`,r:.92,w:250});
+    if(sc){const parts=sc.split(' ');if(parts.length>1)L.push({x:parts.slice(0,-1).join(' '),r:.9,w:120});L.push({x:parts.slice(-1)[0]+'!',r:.5,p:1.12,w:850})}
+    if(as.length)L.push({x:'Assisted by '+as.map(([n,a])=>who(n,a)).join(', and ')+'.',r:.9,w:700});
+    else L.push({x:'Unassisted.',r:.9,w:700});
+    if(tm)L.push({x:`Time of the goal, ${tm}.`,r:.9,w:0});
+  }
+  return L}
+let paGen=0;
+function paUnlock(){try{if(paUnlock.done||!('speechSynthesis' in window))return;paUnlock.done=1;const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}
 function pa(manual){
-  if(!('speechSynthesis' in window)){if(manual)toast('This browser has no speech voice for the PA call.');return}
-  try{speechSynthesis.cancel();const fr=cur.lang==='fr';
-    const u=new SpeechSynthesisUtterance(fr?`But des Canadiens! ${cur.n} goal!`:`${cur.n.split(' ').slice(0,-1).join(' ')} ${short(cur)} goal!`);
-    u.rate=.82;u.pitch=.6;u.volume=1;const vs=speechSynthesis.getVoices().filter(v=>v.localService!==false&&(fr?/^fr/:/^en/).test(v.lang));const v=vs.find(v=>/David|Daniel|Alex|Fred|Thomas|male/i.test(v.name))||vs[0];if(v)u.voice=v;speechSynthesis.speak(u)}catch(e){}
+  if(!('speechSynthesis' in window)){if(manual)toast('This browser has no speech voice for the PA call.');goalRun=null;return}
+  if(manual)goalRun=null;const g=++paGen;try{speechSynthesis.cancel()}catch(e){}
+  const L=paScript(),vEn=bestVoice(false),vFr=bestVoice(true);let i=0;
+  if(manual&&!paInfo().s&&!paInfo().sn)toast('Add the scorer, assists and time under PA call to hear the full call.');
+  $('onair').classList.add('live');
+  (function next(){
+    if(g!==paGen||i>=L.length){if(g===paGen){onAir(400);if(!manual&&goalRun&&goalRun.pa)goalRun=null;if(cur.horn.chime&&!manual)chimes(Math.max(1,goals[cur.id]||1))}return}
+    const c=L[i++];const u=new SpeechSynthesisUtterance(c.x);u.rate=c.r??.92;u.pitch=c.p??.95;u.volume=fxVol();
+    const v=c.fr?vFr:vEn;if(v){u.voice=v;u.lang=v.lang}else u.lang=c.fr?'fr-CA':'en-US';
+    let moved=false;const go=()=>{if(moved)return;moved=true;setTimeout(next,c.w??300)};
+    u.onend=go;u.onerror=go;setTimeout(go,8000);
+    try{speechSynthesis.speak(u)}catch(e){go()}
+  })();
 }
+function paCancel(){paGen++;try{speechSynthesis.cancel()}catch(e){}}
 
-function hornDesc(t){const b=t.horn.b;return b.length>1?b.length+' blasts':b[0][0].toFixed(1)+'s blast'}
+function chargeShout(t){return crowdSay(t+.05,[S('ch','ah','r+j',0,1.3,1.15,1.25)],.5,{roar:.35})}
+function chantPads(t){const L=TEAM_CHANTS[t.id]||[['letsgo','weak']];
+  return L.map(([kind,conf],i)=>{const c=CHANTS[kind](t.id),clip=i===0&&clips[t.id+':c'];
+    return {k:i===0?'4':'',b:c.b,s:clip?'Your chant file':('Crowd chant'+(kind==='letsgo'?' + claps':kind==='gox'||kind==='cbj'?' + drum':'')+(conf==='weak'?' · not confirmed here':'')),
+      fn:at=>{if(clip){playClip(clip,at,fxBus);return at+8}return c.run(at)}}})}
+function hornDesc(t){const b=t.horn.b;return t.horn.perGoal?'1 blast per goal':b.length>1?b.length+' blasts':b[0][0].toFixed(1)+'s blast'}
+/* St. Louis: the PA goal call ends with a chime rung once for each Blues goal so far. */
+function chimes(k){initAudio();let t=ctx.currentTime+.05;for(let i=0;i<k;i++){[1,2.76,5.4].forEach((r,j)=>{const o=ctx.createOscillator();o.frequency.value=880*r;const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.18/(j+1),t+.005);g.gain.exponentialRampToValueAtTime(.001,t+1.6/(j+1));o.connect(g).connect(bus());o.start(t);track(o,t+1.7)});t+=.75}}
 /* Hold-to-blow. GOAL (button or Space) also fires the light, crowd and arena effects on press,
-   then the PA call and goal song after the horn is released. */
+   then the goal song after the horn is released, and the PA call only once the horn and the song have both ended. */
 let held=null,heldGoal=false,pressT=0;
+/* One goal sequence (horn, song, PA call) runs at a time. Sounding the horn again while it runs, or while the song plays,
+   blows the horn over it and leaves the song and the PA call alone. */
+let goalRun=null,songNow=null,songCtl=null;
+function seqBusy(){return !!((goalRun&&goalRun.team===cur.id&&Date.now()-goalRun.t0<90000)||(songNow&&!songNow.done&&songNow.team===cur.id))}
 async function holdStart(isGoal){
-  if(held)return;initAudio();await ctx.resume();if(held)return;
-  const t=cur,t0=ctx.currentTime+.01;pressT=t0;heldGoal=isGoal;
+  if(held)return;paUnlock();initAudio();await ctx.resume();if(held)return;const over=isGoal&&seqBusy();if(isGoal&&!over)paCancel();
+  const t=cur,t0=ctx.currentTime+.01;pressT=t0;heldGoal=isGoal&&!over;
   held=clips[t.id+':h']?{pending:holdClip(clips[t.id+':h'])}:startHorn(t.horn,t0);
   $('light').classList.add('on');$('onair').classList.add('live');clearTimeout(airT);
   if(isGoal){
     $('goalBtn').classList.add('hit');$('flash').classList.remove('go');void $('flash').offsetWidth;$('flash').classList.add('go');
     t.fx.forEach((f,i)=>FX[f](t0+(t.fxAt??.15)+i*.4));
     if($('crowdOn').checked)crowd(t0+.25,9,.6);
-    $('npTag').textContent='GOAL';$('npSong').textContent=t.song[0];$('npArtist').textContent=t.song[1];
+    if(!over){goals[t.id]=(goals[t.id]||0)+1;const gc=$('gcount');if(gc)gc.textContent=`GOAL ${goals[t.id]} TONIGHT`;
+    $('npTag').textContent='GOAL';$('npSong').textContent=t.song[0];$('npArtist').textContent=t.song[1];}
   }
 }
 async function holdEnd(){
   if(!held)return;const h=held,isGoal=heldGoal;held=null;
-  if(h.pending)(await h.pending).release();else h.release(ctx.currentTime);
+  const hornDone=h.pending?(await h.pending).release():h.release(ctx.currentTime);
   $('goalBtn').classList.remove('hit');
   const t=cur,end=ctx.currentTime+.2;
   setTimeout(()=>$('light').classList.remove('on'),isGoal?4000:300);onAir(isGoal?5000:400);
   if(!isGoal)return;
-  if($('pa').checked)setTimeout(()=>pa(false),500);
-  if(clips[t.id+':s']){if($('autoSong').checked)playSong(end+.3);else{$('npTag').textContent='SONG READY';$('npArtist').textContent=t.song[1]+' · press Play song or S';songUI()}}
-  else{$('npTag').textContent='CUE SONG';$('npArtist').innerHTML='';const a=document.createElement('a');a.href=ytLink(t.song[0]+' '+t.song[1]+' '+t.n+' goal song');a.target='_blank';a.rel='noopener';a.textContent=t.song[1]+' · search online ↗';$('npArtist').appendChild(a)}
+  const g=++paGen;let songDone=Promise.resolve();goalRun={team:t.id,g,t0:Date.now()};const finish=()=>{if(goalRun&&goalRun.g===g)goalRun=null};
+  const auto=$('autoSong').checked,has=!!clips[t.id+':s'];let sg=null;
+  if(has&&auto)sg=await startSong(t.id,end+.3);
+  if(sg)songDone=sg.ended;
+  else if(has&&!auto){$('npTag').textContent='SONG READY';$('npSong').textContent=t.song[0];$('npArtist').textContent='press Play song or S';songBtn()}
+  Promise.all([hornDone,songDone]).then(()=>{if(g!==paGen||!$('pa').checked)return finish();
+    // let the horn's echo and the crowd settle before the announcer comes on
+    setTimeout(()=>{if(g===paGen&&$('pa').checked){if(goalRun&&goalRun.g===g)goalRun.pa=true;pa(false)}else finish()},sg?900:2200)});
+  if(!has){$('npTag').textContent='CUE SONG';$('npArtist').innerHTML='';const a=document.createElement('a');a.href=ytLink(t.song[0]+' '+t.song[1]+' '+t.n+' goal song');a.target='_blank';a.rel='noopener';a.textContent=t.song[1]+' · search online ↗';$('npArtist').appendChild(a)}
 }
 function bindHold(el,down,up){
   el.addEventListener('pointerdown',e=>{if(e.button>0)return;e.preventDefault();try{el.setPointerCapture(e.pointerId)}catch(_){}down()});
@@ -609,7 +895,7 @@ function bindHold(el,down,up){
   el.addEventListener('keyup',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();up()}});
 }
 window.addEventListener('blur',()=>holdEnd());
-function killAll(){songNode=null;if(held){const h=held;held=null;h.pending?h.pending.then(x=>x.release()):h.release()}active.forEach(n=>{try{n.stop()}catch(e){}});active.clear();try{speechSynthesis.cancel()}catch(e){}$('light').classList.remove('on');$('onair').classList.remove('live');standby();document.querySelectorAll('.pad.playing').forEach(p=>p.classList.remove('playing'))}
+function killAll(){paCancel();goalRun=null;songNow=null;songCtl=null;setTimeout(songBtn,0);if(held){const h=held;held=null;h.pending?h.pending.then(x=>x.release()):h.release()}active.forEach(n=>{try{n.stop()}catch(e){}});active.clear();try{speechSynthesis.cancel()}catch(e){}$('light').classList.remove('on');$('onair').classList.remove('live');standby();document.querySelectorAll('.pad.playing').forEach(p=>p.classList.remove('playing'))}
 function toast(m){$('toast').textContent=m;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2600)}
 function meterLoop(){const bars=$('meter').children,d=new Uint8Array(analyser.frequencyBinCount);(function f(){analyser.getByteFrequencyData(d);for(let i=0;i<bars.length;i++)bars[i].style.height=Math.max(6,d[i+1]/255*100)+'%';requestAnimationFrame(f)})()}
 
@@ -620,37 +906,42 @@ DIVS.forEach(dv=>{const s=document.createElement('div');s.className='div';s.inne
   $('rack').appendChild(s)});
 for(let i=0;i<16;i++)$('meter').appendChild(document.createElement('i'));
 
-bindHold($('goalBtn'),()=>holdStart(true),()=>holdEnd());
-$('songBtn').onclick=()=>songNode?stopSong():playSong();
-try{const v=localStorage.getItem('autoSong');if(v!==null)$('autoSong').checked=v==='1'}catch(e){}
-$('autoSong').onchange=()=>{try{localStorage.setItem('autoSong',$('autoSong').checked?'1':'0')}catch(e){}};$('stopAll').onclick=killAll;
-$('vol').oninput=e=>{if(master)master.gain.value=+e.target.value};
+bindHold($('goalBtn'),()=>holdStart(true),()=>holdEnd());$('stopAll').onclick=killAll;
+$('tmeta').addEventListener('click',e=>{if(e.target.id==='gcount'){goals[cur.id]=0;e.target.textContent='GOAL 0 TONIGHT'}});
+$('songBtn').onclick=toggleSong;
+$('autoSong').onchange=()=>{try{localStorage.setItem('autoSong',$('autoSong').checked?'1':'0')}catch(e){}};
+try{if(localStorage.getItem('autoSong')==='0')$('autoSong').checked=false}catch(e){}
+$('pa').onchange=()=>{$('paState').textContent=$('pa').checked?'ON':'OFF';if(!$('pa').checked)paCancel()};
+$('vol').oninput=e=>{if(fxBus)fxBus.gain.value=+e.target.value};
 document.addEventListener('keydown',e=>{if(e.target.matches('input,select,textarea'))return;
   if(e.code==='Space'){e.preventDefault();if(!e.repeat)holdStart(true)}else if(e.key==='Escape')killAll();
   else if(e.key==='1'){if(!e.repeat)holdStart(false)}
-  else if(e.key==='s'||e.key==='S'){if(!e.repeat&&clips[cur.id+':s'])songNode?stopSong():playSong()}
+  else if(e.key==='s'||e.key==='S'){if(!e.repeat&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();toggleSong()}}
   else{const el=document.querySelector(`.pad[data-key="${e.key}"]`);if(el&&!e.repeat)el.click()}});
 document.addEventListener('keyup',e=>{if(e.code==='Space'||e.key==='1'){e.preventDefault();holdEnd()}});
 function loadFile(input,suffix,label){input.onchange=()=>{const f=input.files[0];if(!f)return;clips[cur.id+suffix]=f;dbPut(cur.id+suffix,f);setTeam(cur);toast(`${label} loaded for ${cur.n}`);input.value=''}}
 loadFile($('file'),':h','Horn file');
 /* Library: match files to teams by code or nickname, plus "horn"/"song" */
 const NICK=Object.fromEntries(T.map(t=>[t.n.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().split(' ').slice(-1)[0],t.id]));
+/* Short codes people use in file names (LA, TB, NJ, SJ...). A file is a song unless its name says horn. */
+const SHORT={LA:'LAK',TB:'TBL',NJ:'NJD',SJ:'SJS',VEG:'VGK',WAS:'WSH',CLB:'CBJ',NAS:'NSH',MON:'MTL',UTH:'UTA',ARI:'UTA',PHX:'UTA',LV:'VGK'};
 function matchFile(name){
   const u=name.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\.[A-Z0-9]+$/,'');
-  const kind=/HORN/.test(u)?':h':/SONG|MUSIC/.test(u)?':s':null;if(!kind)return null;
-  const code=u.match(/^([A-Z]{3})(?![A-Z])/);let id=code&&T.find(t=>t.id===code[1])?code[1]:null;
+  const code=u.match(/^([A-Z]{2,3})(?![A-Z])/),c=code&&(SHORT[code[1]]||code[1]);let id=c&&T.find(t=>t.id===c)?c:null;
   if(!id)for(const w of u.split(/[^A-Z]+/))if(NICK[w]){id=NICK[w];break}
-  return id?id+kind:null;
+  if(!id)return null;const st=T.find(t=>t.id===id).song[0].toUpperCase();
+  const kind=/HORN/.test(u)?':h':(/CHANT/.test(u)&&!/CHANT/.test(st))?':c':':s';
+  return id+kind;
 }
 function addFiles(files){let n=0,skip=[];[...files].forEach(f=>{if(!/^audio\//.test(f.type)&&!/\.(mp3|wav|m4a|ogg|aac|flac)$/i.test(f.name))return;const k=matchFile(f.name);if(!k){skip.push(f.name);return}clips[k]=f;dbPut(k,f);n++});
-  setTeam(cur);toast(n?`Loaded ${n} file${n>1?'s':''}`+(skip.length?` · ${skip.length} not matched (e.g. ${skip[0]})`:''):'No files matched. Name them like CHI-horn.mp3 or Blackhawks song.mp3')}
+  setTeam(cur);toast(n?`Loaded ${n} file${n>1?'s':''}`+(skip.length?` · ${skip.length} not matched (e.g. ${skip[0]})`:''):'No files matched. Start each name with the team, like "CHI - Chelsea Dagger.mp3" or "CHI horn.mp3"')}
 $('bulk').onchange=()=>{addFiles($('bulk').files);$('bulk').value=''};
 $('folder').onchange=()=>{addFiles($('folder').files);$('folder').value=''};
 function renderLibrary(){
-  const h=T.filter(t=>clips[t.id+':h']).length,sg=T.filter(t=>clips[t.id+':s']).length;
-  $('libCount').textContent=`${h}/32 HORNS · ${sg}/32 SONGS`;
+  const h=T.filter(t=>clips[t.id+':h']).length,sg=T.filter(t=>clips[t.id+':s']).length,bi=T.filter(t=>clips[t.id+':s']&&clips[t.id+':s'].builtin).length;
+  $('libCount').textContent=`${h}/32 HORNS · ${sg}/32 SONGS (${bi} BUILT IN)`;
   $('checklist').innerHTML='';T.forEach(t=>{const b=document.createElement('button');b.className='ck';b.title=t.n;b.setAttribute('aria-current',t===cur);
-    b.innerHTML=`${t.id}<i>${clips[t.id+':h']?'<b>H</b>':'·'}${clips[t.id+':s']?'<b>S</b>':'·'}</i>`;b.onclick=()=>setTeam(t);$('checklist').appendChild(b)});
+    b.innerHTML=`${t.id}<i>${clips[t.id+':h']?'<b>H</b>':'·'}${clips[t.id+':s']?(clips[t.id+':s'].builtin?'s':'<b>S</b>'):'·'}${clips[t.id+':c']?'<b>C</b>':''}</i>`;b.onclick=()=>setTeam(t);$('checklist').appendChild(b)});
 }
 /* Export/import as a standard .zip of named files (CHI-horn.mp3, CHI-song.mp3, ...) */
 const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
@@ -678,18 +969,25 @@ async function readZip(buf){ // returns File[]; handles stored and deflated entr
 }
 const framed=(()=>{try{return window.self!==window.top}catch(e){return true}})();
 let downloads=null;(async()=>{try{downloads=await window.claude?.use?.('downloads')}catch(e){}if(framed&&!downloads)$('exportLib').hidden=true})();
-$('exportLib').onclick=async()=>{const keys=Object.keys(clips);if(!keys.length)return toast('Nothing to export yet');
-  const entries=keys.map(k=>{const f=clips[k],ext=((f.name||'').match(/\.(\w+)$/)||[,'mp3'])[1].toLowerCase();return {name:`${k.slice(0,3)}-${k.endsWith(':h')?'horn':'song'}.${ext}`,blob:f}});
+$('exportLib').onclick=async()=>{const keys=Object.keys(clips).filter(k=>!clips[k].builtin);if(!keys.length)return toast('Nothing to export yet');
+  const entries=keys.map(k=>{const f=clips[k],ext=((f.name||'').match(/\.(\w+)$/)||[,'mp3'])[1].toLowerCase();return {name:`${k.slice(0,3)}-${k.endsWith(':h')?'horn':k.endsWith(':c')?'chant':'song'}.${ext}`,blob:f}});
   const zip=await makeZip(entries),filename='nhl-soundboard-library.zip';
   if(downloads){try{await downloads.save({filename,data:zip});toast(`Saved ${keys.length} files`)}catch(e){if(e&&e.code!=='declined')toast('This view cannot save files');}return}
   const a=document.createElement('a');a.href=URL.createObjectURL(zip);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);toast(`Exported ${keys.length} files`)};
 $('importLib').onchange=async()=>{const f=$('importLib').files[0];$('importLib').value='';if(!f)return;
   try{addFiles(await readZip(await f.arrayBuffer()))}catch(e){toast('That file is not a zip of audio files')}};
 loadFile($('songfile'),':s','Song file');
-$('clearClip').onclick=()=>{delete clips[cur.id+':h'];delete clips[cur.id+':s'];dbDel(cur.id+':h');dbDel(cur.id+':s');setTeam(cur);toast('Back to the synthesized horn')};
+const PAF={s:'paS',sn:'paSn',a1:'paA1',a1n:'paA1n',a2:'paA2',a2n:'paA2n',tm:'paTm'};
+function paFill(){const p=paInfo();Object.entries(PAF).forEach(([k,id])=>{$(id).value=p[k]||''})}
+Object.entries(PAF).forEach(([k,id])=>$(id).addEventListener('input',()=>{const p=paInfo();p[k]=$(id).value;try{localStorage.setItem('pa:'+cur.id,JSON.stringify(p))}catch(e){}}));
+function paVoices(){const sel=$('paVoice'),vs=voiceList(false);let want='';try{want=localStorage.getItem('paVoice')||''}catch(e){}
+  sel.innerHTML='<option value="">Best available</option>'+vs.map(v=>`<option></option>`).join('');vs.forEach((v,i)=>{const o=sel.options[i+1];o.value=v.name;o.textContent=`${v.name} (${v.lang})`});sel.value=vs.some(v=>v.name===want)?want:''}
+$('paVoice').onchange=e=>{try{e.target.value?localStorage.setItem('paVoice',e.target.value):localStorage.removeItem('paVoice')}catch(_){}};
+try{paVoices();speechSynthesis.addEventListener('voiceschanged',paVoices)}catch(e){}
+$('clearClip').onclick=()=>{['h','s','c'].forEach(k=>{delete clips[cur.id+':'+k];dbDel(cur.id+':'+k)});addBuiltins();setTeam(cur);toast(BUILTIN[cur.id]?'Back to the synthesized horn and the built-in song':'Back to the synthesized horn')};
 
 (async()=>{let saved;try{saved=localStorage.getItem('team')}catch(e){}
-  setTeam(T.find(t=>t.id===saved)||cur);await openDB();await dbAll();setTeam(cur)})();
+  setTeam(T.find(t=>t.id===saved)||cur);await openDB();await dbAll();addBuiltins();setTeam(cur)})();
 </script>
 
 </body>
