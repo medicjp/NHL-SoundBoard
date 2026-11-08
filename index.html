@@ -443,9 +443,10 @@ const shaper=(()=>{let c;return()=>{if(c)return c;const n=1024;c=new Float32Arra
    att = swell time (s), rel = release time (s), air = breath noise amount, tone = brightness, scoop = semitones flat at the start.
    startHorn() sounds until release() is called, like the operator's button: air valve open while held. */
 const waveCache={};
-function hornWave(bright){const k=Math.round(bright*20);if(waveCache[k])return waveCache[k];
-  const N=64,re=new Float32Array(N+1),im=new Float32Array(N+1),slope=1.25-bright*.6;
-  for(let n=1;n<=N;n++){const a=Math.pow(n,-slope)*(n%2?1:.8)*(1+.25*Math.sin(n*.9));re[n]=a*Math.cos(n*1.7);im[n]=a*Math.sin(n*1.7)}
+function hornWave(bright,bell=0){const k=Math.round(bright*20)+'_'+bell;if(waveCache[k])return waveCache[k];
+  // every bell is cast and tuned a little differently: its own harmonic ripple and phase, so no two bells share one waveform
+  const N=64,re=new Float32Array(N+1),im=new Float32Array(N+1),slope=1.25-bright*.6+bell*.04,rp=.9+bell*.37,ph=1.7+bell*.83;
+  for(let n=1;n<=N;n++){const a=Math.pow(n,-slope)*(n%2?1:.8)*(1+.25*Math.sin(n*rp+bell));re[n]=a*Math.cos(n*ph);im[n]=a*Math.sin(n*ph)}
   return waveCache[k]=ctx.createPeriodicWave(re,im)}
 function hornNotes(h){return h.n||h.ch.map(r=>h.f*r)}
 const shaper2=(()=>{let c;return()=>{if(c)return c;const n=2048;c=new Float32Array(n);const o=.14,k=3;for(let i=0;i<n;i++){const x=i/n*2-1;c[i]=(Math.tanh(k*(x+o))-Math.tanh(k*o))/Math.tanh(k)}return c}})();
@@ -453,8 +454,8 @@ function startHorn(h,t){
   const att=h.att??.22,rel=h.rel??.28,air=h.air??.5,notes=hornNotes(h),low=Math.min(...notes);
   const out=hornBus();out.gain.value=.27/Math.sqrt(notes.length);
   // air pressure builds quickly then blooms to full: an exponential approach, not a straight ramp
-  const A=Math.max(att,.06),tc=A/3,g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.setTargetAtTime(.95,t,tc);
-  const gainAt=x=>x<=t?0:.95*(1-Math.exp(-(x-t)/tc));
+  const A=Math.max(att,.06),tc=A/3,g=ctx.createGain(),t2=t+A*2,v2=.95*(1-Math.exp(-(t2-t)/tc));g.gain.setValueAtTime(0,t);g.gain.setTargetAtTime(.95,t,tc);g.gain.setTargetAtTime(.88,t2,3);
+  const gainAt=x=>x<=t?0:x<=t2?.95*(1-Math.exp(-(x-t)/tc)):.88+(v2-.88)*Math.exp(-(x-t2)/3);
   const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=low*.6;hp.Q.value=.6;
   // the big bell's body: weight around the fundamental and second harmonic
   const body=ctx.createBiquadFilter();body.type='lowshelf';body.frequency.value=Math.max(160,low*2.2);body.gain.value=6;
@@ -465,18 +466,24 @@ function startHorn(h,t){
   // asymmetric clipping: the diaphragm slaps its seat harder one way, which adds the brassy even harmonics
   const ws=ctx.createWaveShaper();ws.curve=shaper2();ws.oversample='4x';
   const pre=ctx.createGain();pre.gain.value=.42;
-  pre.connect(ws).connect(hp).connect(body).connect(f1).connect(f2).connect(lp).connect(g).connect(out);
-  const oscs=[],wave=hornWave(h.tone),off=()=>Math.random()*2.6;
+  pre.connect(ws).connect(hp).connect(body).connect(f1).connect(f2).connect(lp).connect(g);
+  // width: the horn reaches the mics straight and again off the glass and boards a few ms later, differently on each side
+  const wm=ctx.createChannelMerger(2);g.connect(wm,0,0);g.connect(wm,0,1);
+  [[0,.0113,.3],[1,.0171,.3],[0,.0237,.14],[1,.0291,.14]].forEach(([c,d,v])=>{const dl=ctx.createDelay(.05);dl.delayTime.value=d;const dg=ctx.createGain();dg.gain.value=v;g.connect(dl).connect(dg).connect(wm,0,c)});
+  const wo=ctx.createGain();wo.gain.value=.8;wm.connect(wo).connect(out);
+  const oscs=[],off=()=>Math.random()*2.6;
+  // pitch sags a few cents as pressure drops over a long blast (shared by all bells, so the chord stays in tune with itself)
+  const sag=ctx.createConstantSource?ctx.createConstantSource():null;if(sag){sag.offset.setValueAtTime(0,t);sag.offset.setTargetAtTime(-14,t+A*2,3.5);sag.start(t);track(sag);oscs.push([sag,0])}
   // uneven reed buzz: random, slow wobble in loudness (not a steady tremolo)
-  const rn=noise(),rl=ctx.createBiquadFilter();rl.type='lowpass';rl.frequency.value=12;const rg=ctx.createGain();rg.gain.value=.22;
+  const rn=noise(),rl=ctx.createBiquadFilter();rl.type='lowpass';rl.frequency.value=12;const rg=ctx.createGain();rg.gain.setValueAtTime(.5,t);rg.gain.setTargetAtTime(.22,t+.04,A*.5);
   rn.connect(rl).connect(rg).connect(g.gain);rn.start(t,off());track(rn);oscs.push([rn,0]);
   notes.forEach((f,i)=>{
     // air reaches each bell a few milliseconds apart, so a chord speaks unevenly rather than all at once
-    const tb=t+(i?.008+Math.random()*.035:0),o=ctx.createOscillator();o.setPeriodicWave(wave);o.detune.value=i?(Math.random()*8-4):0;
+    const tb=t+(i?.008+Math.random()*.035:0),o=ctx.createOscillator();o.setPeriodicWave(hornWave(h.tone,i%4));if(sag)sag.connect(o.detune);o.detune.value=i?(Math.random()*8-4):0;
     o.frequency.setValueAtTime(f*Math.pow(2,-h.scoop/12),tb);o.frequency.exponentialRampToValueAtTime(f*.996,tb+Math.max(.08,att*.9));o.frequency.linearRampToValueAtTime(f,tb+att*1.6+.1);
     // each bell drifts slowly and jitters at random, so the chord beats unevenly like a real set
     const l=ctx.createOscillator();l.frequency.value=.12+Math.random()*.25;const lg=ctx.createGain();lg.gain.value=4;l.connect(lg).connect(o.detune);l.start(t);track(l);oscs.push([l,0]);
-    const jn=noise(),jl=ctx.createBiquadFilter();jl.type='lowpass';jl.frequency.value=28;const jg=ctx.createGain();jg.gain.value=55;
+    const jn=noise(),jl=ctx.createBiquadFilter();jl.type='lowpass';jl.frequency.value=28;const jg=ctx.createGain();jg.gain.setValueAtTime(130,t);jg.gain.setTargetAtTime(50,t+.03,A*.45);
     jn.connect(jl).connect(jg).connect(o.detune);jn.start(t,off());track(jn);oscs.push([jn,0]);
     const og=ctx.createGain();og.gain.setValueAtTime(0,t);og.gain.setValueAtTime(0,tb);og.gain.linearRampToValueAtTime(i===0?1:.8,tb+.015);o.connect(og).connect(pre);o.start(t);track(o);oscs.push([o,f]);
   });
@@ -487,7 +494,7 @@ function startHorn(h,t){
   const first=oscs.find(([o,f])=>f)[0];const ended=new Promise(res=>{first.addEventListener('ended',res);setTimeout(res,1e4*60)});
   let done=false;
   return {release(at){
-    if(done)return ended;done=true;const r=Math.max(at??ctx.currentTime,t+.09),v=gainAt(r);
+    if(done)return ended;done=true;const r=Math.max(at??ctx.currentTime,t+.28),v=gainAt(r); // a quick tap still opens the valve for a short blast
     // valve closes: pressure dies away on a curve, the tone darkens and sags, a puff of air, then the bowl rings on
     g.gain.cancelScheduledValues(r);g.gain.setValueAtTime(v,r);g.gain.setTargetAtTime(0,r,rel/3.2);
     lp.frequency.cancelScheduledValues(r);lp.frequency.setValueAtTime(top,r);lp.frequency.setTargetAtTime(top*.25,r,rel/2.5);
@@ -675,7 +682,7 @@ const ORGAN={
 let db;const clips={};
 /* Goal songs come from the viewer's own library (Load folder / Load files); none are stored with this page. */
 const BUILTIN={};
-const HRMS={"BOS":0.1821,"BUF":0.1334,"DET":0.1539,"FLA":0.156,"MTL":0.0899,"OTT":0.0993,"TBL":0.1737,"TOR":0.1018,"CAR":0.1401,"CBJ":0.1812,"NJD":0.1494,"NYI":0.1284,"NYR":0.0992,"PHI":0.2092,"PIT":0.0951,"WSH":0.1338,"CHI":0.1303,"COL":0.2002,"DAL":0.1214,"MIN":0.1447,"NSH":0.1283,"STL":0.1808,"UTA":0.1316,"WPG":0.088,"ANA":0.2045,"CGY":0.1034,"EDM":0.0844,"LAK":0.0892,"SJS":0.1828,"SEA":0.2216,"VAN":0.1467,"VGK":0.2018};
+const HRMS={"BOS":0.1451,"BUF":0.1101,"DET":0.1526,"FLA":0.1583,"MTL":0.0704,"OTT":0.0876,"TBL":0.1147,"TOR":0.0832,"CAR":0.1164,"CBJ":0.1071,"NJD":0.1505,"NYI":0.0979,"NYR":0.0827,"PHI":0.1501,"PIT":0.0745,"WSH":0.1143,"CHI":0.1122,"COL":0.1603,"DAL":0.1018,"MIN":0.1444,"NSH":0.1065,"STL":0.1131,"UTA":0.1104,"WPG":0.0742,"ANA":0.1893,"CGY":0.0851,"EDM":0.0652,"LAK":0.0673,"SJS":0.1392,"SEA":0.1659,"VAN":0.113,"VGK":0.1442};
 const bfetch={};function builtinClip(id){const url=BUILTIN[id];return {builtin:true,name:url.split('/').pop()+'.mp3',
   prefetch(){return bfetch[id]||(bfetch[id]=fetch(url).then(r=>{if(!r.ok)throw new Error('fetch '+r.status);return r.arrayBuffer()}).catch(e=>{delete bfetch[id];throw e}))},
   async arrayBuffer(){return (await this.prefetch()).slice(0)}}}
@@ -853,7 +860,7 @@ function seqBusy(){return !!((goalRun&&goalRun.team===cur.id&&Date.now()-goalRun
 async function holdStart(isGoal){
   if(held)return;paUnlock();initAudio();await ctx.resume();if(held)return;const over=isGoal&&seqBusy();if(isGoal&&!over)paCancel();
   const t=cur,t0=ctx.currentTime+.01;pressT=t0;heldGoal=isGoal&&!over;
-  held=clips[t.id+':h']?{pending:holdClip(clips[t.id+':h'])}:startHorn(t.horn,t0);
+  held=clips[t.id+':h']?{pending:holdClip(clips[t.id+':h'])}:startHorn(t.horn,t0+.03); // solenoid and air travel before the horn speaks
   $('light').classList.add('on');$('onair').classList.add('live');clearTimeout(airT);
   if(isGoal){
     $('goalBtn').classList.add('hit');$('flash').classList.remove('go');void $('flash').offsetWidth;$('flash').classList.add('go');
