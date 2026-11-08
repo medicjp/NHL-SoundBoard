@@ -322,7 +322,7 @@ function initAudio(){
   master=ctx.createGain();master.gain.value=+document.getElementById('vol').value;
   analyser=ctx.createAnalyser();analyser.fftSize=64;
   dry=ctx.createGain();
-  verb=ctx.createConvolver();verb.buffer=arenaIR(3.2);
+  verb=ctx.createConvolver();verb.buffer=arenaIR(3.8);
   verbGain=ctx.createGain();verbGain.gain.value=.45;
   dry.connect(comp);verb.connect(verbGain).connect(comp);
   comp.connect(master).connect(analyser).connect(ctx.destination);
@@ -330,12 +330,12 @@ function initAudio(){
 }
 function bus(){const g=ctx.createGain();g.connect(dry);g.connect(verb);return g}
 function arenaIR(sec){
-  const r=ctx.sampleRate,len=r*sec,b=ctx.createBuffer(2,len,r);
-  for(let c=0;c<2;c++){const d=b.getChannelData(c);
-    for(let i=0;i<len;i++){const t=i/r;
-      // early reflections off the glass and bowl, then diffuse tail
-      const er=(i%Math.floor(r*0.031)===0&&t<.25)?.6:0;
-      d[i]=((Math.random()*2-1)+er)*Math.pow(1-i/len,2.6)*(t<.02?t/.02:1);}}
+  const r=ctx.sampleRate,len=Math.floor(r*sec),b=ctx.createBuffer(2,len,r),pd=Math.floor(r*.025);
+  for(let c=0;c<2;c++){const d=b.getChannelData(c);let lp=0;
+    for(let k=0;k<14;k++){const at=pd+Math.floor(r*(.008+Math.random()*.18)),amp=(Math.random()<.5?-1:1)*(.5-k*.025);if(at<len)d[at]+=amp}  // glass, boards, bowl
+    for(let i=pd;i<len;i++){const t=(i-pd)/r,env=Math.exp(-t*6.9/(sec*.85));
+      const k=Math.min(.97,.25+t*.32);lp=lp*k+(Math.random()*2-1)*(1-k);  // the tail loses highs as it decays
+      d[i]+=lp*env*(t<.03?t/.03:1)*1.6}}
   return b;
 }
 function track(node,stopAt){active.add(node);node.onended=()=>active.delete(node);if(stopAt)node.stop(stopAt);return node}
@@ -347,29 +347,65 @@ function noise(){
 }
 const shaper=(()=>{let c;return()=>{if(c)return c;const n=1024;c=new Float32Array(n);for(let i=0;i<n;i++){const x=i/n*2-1;c[i]=Math.tanh(x*2.6)}return c}})();
 
-/* Air horn: stacked detuned saw/square reeds, pitch scoop on attack, nonlinear drive, bandpassed through the horn bell.
-   startHorn() sounds until release() is called, like the operator's button: air valve open while held. */
+/* Air horn model.
+   Each trumpet is a diaphragm valve chopping compressed air: a narrow-pulse waveform whose harmonics are shaped by
+   the flared bell (high-pass below the horn's cutoff, broad resonance in the upper mids). Trumpets start a few
+   milliseconds apart as air reaches them, rise in pitch while pressure builds, wander slightly while sounding,
+   carry air hiss, and are heard through a large, wet arena. startHorn() sounds until release(): air valve open while held. */
+const waveCache=new Map();
+function hornWave(f,tone){
+  const key=Math.round(f)+':'+tone;if(waveCache.has(key))return waveCache.get(key);
+  const N=Math.min(120,Math.floor(16000/f)),re=new Float32Array(N+1),im=new Float32Array(N+1);
+  const duty=.18+.12*(1-tone),fc=f*.9,formant=900+tone*1900;
+  for(let n=1;n<=N;n++){const fn=n*f;
+    let a=Math.abs(Math.sin(Math.PI*n*duty))/n;                 // diaphragm: narrow air pulses
+    a*=1/(1+Math.pow(fc/fn,4));                                 // bell high-pass: little energy below the horn's cutoff
+    a*=1+1.8*Math.exp(-Math.pow(Math.log(fn/formant)/0.55,2));  // bell resonance
+    a*=1/(1+Math.pow(fn/(5200+tone*4000),2));                   // air absorption over distance
+    im[n]=a;}
+  const w=ctx.createPeriodicWave(re,im,{disableNormalization:false});waveCache.set(key,w);return w;
+}
+let driftBuf;
+function drift(){ // smooth random wander, values about -1..1, played slowly for pitch drift
+  if(!driftBuf){const r=ctx.sampleRate,len=r*8;driftBuf=ctx.createBuffer(1,len,r);const d=driftBuf.getChannelData(0);let v=0,x=0;
+    for(let i=0;i<len;i++){x+=(Math.random()*2-1)*.002;x*=.9995;v+=(x-v)*.001;d[i]=v*40}}
+  const s=ctx.createBufferSource();s.buffer=driftBuf;s.loop=true;s.loopStart=Math.random()*7;return s;
+}
+let hornBus;
+function hornOut(){ // horns sit far up in the rafters: wetter mix than chants and effects
+  if(!hornBus){hornBus=ctx.createGain();const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=7000;
+    const d=ctx.createGain();d.gain.value=.75;const w=ctx.createGain();w.gain.value=1.25;hornBus.connect(lp);lp.connect(d).connect(dry);lp.connect(w).connect(verb)}
+  return hornBus;
+}
 function startHorn(h,t){
-  const out=bus();out.gain.value=.55;
-  const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.9,t+.07);
-  const ws=ctx.createWaveShaper();ws.curve=shaper();
-  const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=900+h.tone*2600;lp.Q.value=1.4;
-  const pk=ctx.createBiquadFilter();pk.type='peaking';pk.frequency.value=h.f*4;pk.gain.value=6;pk.Q.value=1.2;
-  const pre=ctx.createGain();pre.gain.value=.22;
-  pre.connect(ws).connect(lp).connect(pk).connect(g).connect(out);
-  const oscs=[];
-  h.ch.forEach((r,i)=>[-6,0,7].forEach(det=>{
-    const o=ctx.createOscillator();o.type=i%2?'square':'sawtooth';const f=h.f*r;
-    o.frequency.setValueAtTime(f*Math.pow(2,-h.scoop/12),t);o.frequency.exponentialRampToValueAtTime(f,t+.22);o.detune.value=det;
-    const og=ctx.createGain();og.gain.value=(i===0?1:.75)/3;o.connect(og).connect(pre);o.start(t);track(o);oscs.push([o,f]);
-  }));
-  const lfo=ctx.createOscillator();lfo.frequency.value=5.5;const lg=ctx.createGain();lg.gain.value=.05;lfo.connect(lg).connect(g.gain);lfo.start(t);track(lfo);oscs.push([lfo,0]);
+  const out=ctx.createGain();out.gain.value=.5;out.connect(hornOut());
+  const sat=ctx.createWaveShaper();sat.curve=shaper();sat.oversample='2x';const pre=ctx.createGain();pre.gain.value=.55;pre.connect(sat).connect(out);
+  const nodes=[],voices=[];const n=h.ch.length;
+  h.ch.forEach((r,i)=>{
+    const f=h.f*r,t0=t+Math.random()*.05,o=ctx.createOscillator();o.setPeriodicWave(hornWave(f,h.tone));
+    // pressure build: pitch starts flat and settles, with a slight overshoot
+    o.frequency.setValueAtTime(f*Math.pow(2,-(h.scoop+.6)/12),t0);o.frequency.exponentialRampToValueAtTime(f*1.004,t0+.16+Math.random()*.06);o.frequency.exponentialRampToValueAtTime(f,t0+.35);
+    const dr=drift();dr.playbackRate.value=.6+Math.random()*.8;const dg=ctx.createGain();dg.gain.value=3+Math.random()*3;dr.connect(dg).connect(o.detune);  // ±cents wander
+    const fl=ctx.createOscillator();fl.frequency.value=7+Math.random()*5;const fg=ctx.createGain();fg.gain.value=1.5;fl.connect(fg).connect(o.detune);     // diaphragm flutter
+    const g=ctx.createGain();const lvl=(i===0?1:.8)/Math.sqrt(n);
+    g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(lvl*.35,t0+.03);g.gain.linearRampToValueAtTime(lvl*1.08,t0+.12);g.gain.linearRampToValueAtTime(lvl,t0+.3);
+    const am=ctx.createOscillator();am.frequency.value=3.5+Math.random()*2;const ag=ctx.createGain();ag.gain.value=lvl*.04;am.connect(ag).connect(g.gain);
+    const pan=ctx.createStereoPanner?ctx.createStereoPanner():null;
+    if(pan){pan.pan.value=n>1?(i/(n-1)-.5)*.5:0;o.connect(g).connect(pan).connect(pre)}else o.connect(g).connect(pre);
+    [o,dr,fl,am].forEach(x=>{x.start(t0);track(x)});nodes.push(o,dr,fl,am);voices.push({o,g,f,lvl});
+  });
+  // compressed-air hiss, strongest as the valve opens
+  const hs=noise(),hb=ctx.createBiquadFilter();hb.type='bandpass';hb.frequency.value=3800;hb.Q.value=.7;const hg=ctx.createGain();
+  hg.gain.setValueAtTime(0,t);hg.gain.linearRampToValueAtTime(.09,t+.02);hg.gain.exponentialRampToValueAtTime(.018,t+.25);
+  hs.connect(hb).connect(hg).connect(out);hs.start(t);track(hs);nodes.push(hs);
   let done=false;
   return {release(at){
-    if(done)return;done=true;const r=Math.max(at??ctx.currentTime,t+.09);
-    // valve closes: air pressure falls, pitch sags slightly, sound dies within ~0.15s
-    g.gain.cancelScheduledValues(r);g.gain.setValueAtTime(g.gain.value||.9,r);g.gain.linearRampToValueAtTime(0,r+.15);
-    oscs.forEach(([o,f])=>{if(f){o.frequency.cancelScheduledValues(r);o.frequency.setValueAtTime(f,r);o.frequency.exponentialRampToValueAtTime(f*.97,r+.15)}try{o.stop(r+.2)}catch(e){}});
+    if(done)return;done=true;const r=Math.max(at??ctx.currentTime,t+.12);
+    // valve closes: pressure drops, pitch sags, sound chokes off quickly
+    voices.forEach(({o,g,f,lvl})=>{g.gain.cancelScheduledValues(r);g.gain.setValueAtTime(lvl,r);g.gain.exponentialRampToValueAtTime(lvl*.25,r+.06);g.gain.exponentialRampToValueAtTime(.0005,r+.2);
+      o.frequency.cancelScheduledValues(r);o.frequency.setValueAtTime(f,r);o.frequency.exponentialRampToValueAtTime(f*Math.pow(2,-.7/12),r+.2)});
+    hg.gain.cancelScheduledValues(r);hg.gain.setValueAtTime(.018,r);hg.gain.linearRampToValueAtTime(.05,r+.02);hg.gain.exponentialRampToValueAtTime(.0005,r+.18);
+    nodes.forEach(x=>{try{x.stop(r+.25)}catch(e){}});
   }};
 }
 /* Programmed pattern: the team's usual blast count and lengths, played automatically. */
