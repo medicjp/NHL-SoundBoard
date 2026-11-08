@@ -491,6 +491,14 @@ function startHorn(h,t){
   const nz=noise(),nb=ctx.createBiquadFilter();nb.type='bandpass';nb.frequency.value=1500+h.tone*900;nb.Q.value=.9;
   const ng=ctx.createGain();ng.gain.setValueAtTime(0,t);ng.gain.linearRampToValueAtTime(.18*air,t+.025);ng.gain.setTargetAtTime(.04*air,t+.06,.12);
   nz.connect(nb).connect(ng).connect(out);nz.start(t,off());track(nz);oscs.push([nz,0]);
+  // valve thump: the solenoid slams open and a slug of air hits the bells before they speak
+  const vt=noise(),vl=ctx.createBiquadFilter();vl.type='lowpass';vl.frequency.value=170;const vg=ctx.createGain();
+  vg.gain.setValueAtTime(0,t);vg.gain.linearRampToValueAtTime(.55*air,t+.006);vg.gain.setTargetAtTime(0,t+.012,.025);
+  vt.connect(vl).connect(vg).connect(out);vt.start(t,off());vt.stop(t+.3);track(vt);
+  // diaphragm growl: until pressure settles, the diaphragm flaps at half speed too, a raspy subharmonic that fades out
+  const gr=ctx.createOscillator();gr.setPeriodicWave(hornWave(h.tone,3));gr.frequency.setValueAtTime(low*.5*Math.pow(2,-h.scoop/12),t);gr.frequency.exponentialRampToValueAtTime(low*.5,t+Math.max(.08,att*.9));
+  const grg=ctx.createGain();grg.gain.setValueAtTime(0,t);grg.gain.linearRampToValueAtTime(.32,t+.02);grg.gain.setTargetAtTime(0,t+.03,A*.35);
+  gr.connect(grg).connect(pre);gr.start(t);gr.stop(t+A*3+.3);track(gr);
   const first=oscs.find(([o,f])=>f)[0];const ended=new Promise(res=>{first.addEventListener('ended',res);setTimeout(res,1e4*60)});
   let done=false;
   return {release(at){
@@ -499,6 +507,8 @@ function startHorn(h,t){
     g.gain.cancelScheduledValues(r);g.gain.setValueAtTime(v,r);g.gain.setTargetAtTime(0,r,rel/3.2);
     lp.frequency.cancelScheduledValues(r);lp.frequency.setValueAtTime(top,r);lp.frequency.setTargetAtTime(top*.25,r,rel/2.5);
     ng.gain.cancelScheduledValues(r);ng.gain.setValueAtTime(.04*air,r);ng.gain.linearRampToValueAtTime(.11*air,r+.035);ng.gain.setTargetAtTime(0,r+.04,rel/3);
+    // the bells keep ringing for an instant after the air stops: a short, damped metallic tail at each bell's pitch
+    notes.forEach((f,i)=>{const b=ctx.createOscillator();b.type='sine';b.frequency.value=f*2.01;const bg=ctx.createGain();bg.gain.setValueAtTime(0,r);bg.gain.linearRampToValueAtTime(.05*v,r+.04);bg.gain.setTargetAtTime(0,r+.05,.09);b.connect(bg).connect(out);b.start(r);b.stop(r+.7);track(b)});
     oscs.forEach(([o,f])=>{if(f){o.frequency.cancelScheduledValues(r);o.frequency.setValueAtTime(f,r);o.frequency.exponentialRampToValueAtTime(f*.95,r+rel*1.4)}try{o.stop(r+rel*2+.2)}catch(e){}});
     return ended;
   }};
